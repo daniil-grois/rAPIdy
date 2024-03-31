@@ -5,10 +5,14 @@ hide:
 
 # Bug report
 
-Ты мой супергерой!
+Если вы столкнулись с каким-либо багом или неполадкой, мы будем очень признательны, если вы сообщили нам об этом. Ваш отзыв поможет нам улучшить наш продукт.
+!!! failure ""
+    <div class="big-text">**Пожалуйста, заполните <a href="https://github.com/daniil-grois/rAPIdy/issues/new?assignees=&labels=bug&projects=daniil-grois%2FrAPIdy&template=bug.yml&title=%5BBug%5D+%3Ctitle%3E" target="_blank">форму баг-репорта</a>, чтобы подробно описать проблему, с которой вы столкнулись. Мы постараемся решить эту проблему как можно скорее.**</div>
 
-Если ты нашел баг, попробуй обновиться до последней минорной версии.
-Если не помогло, напиши, пожалуйста, в эту форму (она предварительно уже заполнена).
-Просто опиши с чем столкнулся и я постараюсь реактивно тебе помочь.
+***Спасибо за обратную связь!***
 
-<a href="https://github.com/daniil-grois/rAPIdy/issues/new?assignees=&labels=bug&projects=daniil-grois%2FrAPIdy&template=bug.yml&title=%5BBug%5D+%3Ctitle%3E" target="_blank">Клик меня</a>
+
+
+
+
+
