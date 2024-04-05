@@ -1,4 +1,5 @@
 # Multipart
+Тип Multipart предназначен для работы с данными, переданными в теле запроса в формате Multipart. Этот формат часто используется для передачи файлов и других медиа-данных. Тип Multipart обеспечивает удобный способ извлечения и обработки таких данных из тела запроса
 
 ## Ключевые особенности
 
@@ -22,6 +23,7 @@ duplicates parse as array - с примерами
 ## Типы данных
 
 ### MultipartBody
+Тип MultipartBody используется для извлечения данных из тела HTTP-запроса в формате Multipart. В расширенном примере, параметры username и age извлекаются из данных Multipart. Дополнительно, на параметры username и age накладываются ограничения на минимальную и максимальную длину имени пользователя и условия для возраста.
 <details open>
 <summary><code>MultipartBody</code></summary>
 
@@ -54,6 +56,7 @@ async def handler(
 </details>
 
 ### MultipartBodySchema
+Тип MultipartBodySchema предназначен для извлечения и валидации структурированных данных из тела HTTP-запроса в формате Multipart. Здесь в расширенном примере определена модель UserData, которая описывает параметры username и age. Данный тип позволяет извлечь и проверить структурированные данные Multipart на соответствие заданным правилам.
 <details open>
 <summary><code>MultipartBodySchema</code></summary>
 
@@ -94,6 +97,7 @@ async def handler(
 </details>
 
 ### MultipartBodyRaw
+Тип MultipartBodyRaw используется для извлечения данных из тела HTTP-запроса в формате Multipart без какой-либо предварительной обработки или валидации. Это удобно, когда требуется получить данные в их исходном виде для последующей обработки или передачи на другой сервер
 <details open>
 <summary><code>MultipartBodyRaw</code></summary>
 
