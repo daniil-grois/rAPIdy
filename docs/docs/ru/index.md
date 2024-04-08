@@ -24,6 +24,12 @@ hide:
     <a href="https://pypi.org/project/rapidy" target="blank">
         <img src="https://img.shields.io/pypi/pyversions/rapidy?style=flat&logo=rapidy&logoColor=%237e56c2&color=%237e56c2" alt="Python versions">
     </a>
+    <a href="https://pypi.org/project/rapidy" target="blank">
+        <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v1.json&logoColor=%237e56c2&color=%237e56c2" alt="Pydantic V1">
+    </a>
+    <a href="https://pypi.org/project/rapidy" target="blank">
+        <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json&logoColor=%237e56c2&color=%237e56c2" alt="Pydantic V2">
+    </a>
 </p>
 
 <p align="center">
