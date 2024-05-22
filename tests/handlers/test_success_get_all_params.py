@@ -27,7 +27,7 @@ from rapidy.typedefs import HandlerType
 
 HANDLER_PATH: Final[str] = '/{attr1}/{attr2}'
 
-REQUEST = {'attr1': 'attr1', 'attr2': 'attr1'}
+REQUEST = {'attr1': 'attr1', 'attr2': 'attr2'}
 REQUEST_PATH: Final[str] = HANDLER_PATH.format(**REQUEST)
 
 

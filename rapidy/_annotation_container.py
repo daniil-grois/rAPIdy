@@ -6,7 +6,8 @@ from typing import Any, Dict, Iterator, Optional, Set, Type, Union
 from aiohttp.web_request import Request
 from typing_extensions import get_args, get_origin
 
-from rapidy._annotation_extractor import extract_handler_attr_annotations, NotParameterError
+from rapidy._annotation_extractor import extract_handler_attr_annotations, NotParameterError, \
+    create_model_field_by_handler_signature_param
 from rapidy._client_errors import _create_handler_attr_info_msg, _create_handler_info_msg, ExtractError, \
     RequiredFieldIsMissing
 from rapidy._fields import ModelField
@@ -73,11 +74,12 @@ class ParamAnnotationContainer(ABC):
     @abstractmethod
     def add_field(
             self,
-            param_name: str,
-            annotation: Type[Any],
-            field_info: ParamFieldInfo,
-            param_default: Any,
-            param_default_factory: Optional[NoArgAnyCallable],
+            model_field: ModelField,
+            # param_name: str,
+            # annotation: Type[Any],
+            # field_info: ParamFieldInfo,
+            # param_default: Any,
+            # param_default_factory: Optional[NoArgAnyCallable],
     ) -> None:  # pragma: no cover
         pass
 
@@ -93,19 +95,20 @@ class ParamAnnotationContainerOnlyExtract(ParamAnnotationContainer):
 
     def add_field(
             self,
-            param_name: str,
-            annotation: Type[Any],
-            field_info: ParamFieldInfo,
-            param_default: Any,
-            param_default_factory: Optional[NoArgAnyCallable],
+            model_field: ModelField,
+            # param_name: str,
+            # annotation: Type[Any],
+            # field_info: ParamFieldInfo,
+            # param_default: Any,
+            # param_default_factory: Optional[NoArgAnyCallable],
     ) -> None:
         if self._is_defined:
             raise AnnotationContainerAddFieldError
 
-        if get_origin(annotation) is Union:
-            union_attributes = get_args(annotation)
-            if type(None) in union_attributes:
-                self._is_optional = True
+        # if get_origin(annotation) is Union:
+        #     union_attributes = get_args(annotation)
+        #     if type(None) in union_attributes:
+        #         self._is_optional = True
 
         self._is_defined = True
 
@@ -155,19 +158,20 @@ class ValidateParamAnnotationContainer(ParamAnnotationContainer, ABC):
 
     def _add_field(
             self,
-            param_name: str,
-            annotated_type: Type[Any],
-            field_info: ParamFieldInfo,
-            param_default: Any,
-            param_default_factory: Optional[NoArgAnyCallable],
+            # param_name: str,
+            # annotated_type: Type[Any],
+            # field_info: ParamFieldInfo,
+            # param_default: Any,
+            # param_default_factory: Optional[NoArgAnyCallable],
+            model_field: ModelField,
     ) -> None:
-        model_field = create_param_model_field_by_request_param(
-            annotated_type=annotated_type,
-            field_info=field_info,
-            param_name=param_name,
-            param_default=param_default,
-            param_default_factory=param_default_factory,
-        )
+        # model_field = create_param_model_field_by_request_param(
+        #     annotated_type=annotated_type,
+        #     field_info=field_info,
+        #     param_name=param_name,
+        #     param_default=param_default,
+        #     param_default_factory=param_default_factory,
+        # )
         extraction_name = model_field.alias or model_field.name
 
         if self._map_model_fields_by_alias.get(extraction_name):
@@ -185,16 +189,18 @@ class ParamAnnotationContainerValidateSchema(ValidateParamAnnotationContainer):
 
     def add_field(
             self,
-            param_name: str,
-            annotation: Type[Any],
-            field_info: ParamFieldInfo,
-            param_default: Any,
-            param_default_factory: Optional[NoArgAnyCallable],
+            model_field: ModelField,
+            # param_name: str,
+            # annotation: Type[Any],
+            # field_info: ParamFieldInfo,
+            # param_default: Any,
+            # param_default_factory: Optional[NoArgAnyCallable],
     ) -> None:
         if self._is_defined:
             raise AnnotationContainerAddFieldError
 
-        self._add_field(param_name, annotation, field_info, param_default, param_default_factory)
+        self._add_field(model_field=model_field)
+        # self._add_field(param_name, annotation, field_info, param_default, param_default_factory)
         self._is_defined = True
 
 
@@ -207,18 +213,21 @@ class ParamAnnotationContainerValidateParams(ValidateParamAnnotationContainer):
 
     def add_field(
             self,
-            param_name: str,
-            annotation: Type[Any],
-            field_info: ParamFieldInfo,
-            param_default: Any,
-            param_default_factory: Optional[NoArgAnyCallable],
+            model_field: ModelField,
+            # param_name: str,
+            # annotation: Type[Any],
+            # field_info: ParamFieldInfo,
+            # param_default: Any,
+            # param_default_factory: Optional[NoArgAnyCallable],
+            # model_field: ModelField,
     ) -> None:
         # NOTE: Make sure that the user does not want to extract two parameters using different data extractors.
-        self._added_field_info_types.add(field_info.__class__)
-        if len(self._added_field_info_types) > 1:
-            raise AnnotationContainerAddFieldError
+        # self._added_field_info_types.add(field_info.__class__)
+        # if len(self._added_field_info_types) > 1:
+        #     raise AnnotationContainerAddFieldError
 
-        self._add_field(param_name, annotation, field_info, param_default, param_default_factory)
+        self._add_field(model_field=model_field)
+        # self._add_field(param_name, annotation, field_info, param_default, param_default_factory)
 
 
 def param_factory(
@@ -272,10 +281,11 @@ class AnnotationContainer:
     def add_param(
             self,
             name: str,
-            annotation: Type[Any],
+            # annotation: Type[Any],
             field_info: ParamFieldInfo,
-            default: Any,
-            default_factory: Optional[NoArgAnyCallable],
+            model_field: ModelField,
+            # default: Any,
+            # default_factory: Optional[NoArgAnyCallable],
     ) -> None:
         param_container = self._get_or_create_param_container(
             type_=field_info.param_type,
@@ -284,11 +294,12 @@ class AnnotationContainer:
         )
         try:
             param_container.add_field(
-                param_name=name,
-                annotation=annotation,
-                field_info=field_info,
-                param_default=default,
-                param_default_factory=default_factory,
+                model_field=model_field,
+                # param_name=name,
+                # annotation=annotation,
+                # field_info=field_info,
+                # param_default=default,
+                # param_default_factory=default_factory,
             )
         except AttributeAlreadyExistError:
             raise AttributeDefinitionError(handler=self._handler, param_name=name)
@@ -337,7 +348,8 @@ def create_annotation_container(
         num_of_extracted_signatures += 1
 
         try:
-            annotation, param_field_info, default = extract_handler_attr_annotations(param=param, handler=handler)
+            model_field = create_model_field_by_handler_signature_param(param=param, handler=handler)
+            # annotation, param_field_info, default = extract_handler_attr_annotations(param=param, handler=handler)
         except NotParameterError:
             if is_func_handler:
                 if not get_args(param.annotation):
@@ -347,19 +359,25 @@ def create_annotation_container(
 
             continue
 
-        if isinstance(param_field_info, ParamFieldInfo):
-            try:
-                container.add_param(
-                    annotation=annotation,
-                    field_info=param_field_info,
-                    name=param_name,
-                    default=default,
-                    default_factory=param_field_info.default_factory,
-                )
-            except AnnotationContainerAddFieldError as annotation_container_add_field_error:
-                raise RequestParamError(handler=handler) from annotation_container_add_field_error
+        # TODO: обработку конкретной ошибки
+        container.add_param(
+            name=param_name,
+            field_info=model_field.field_info,
+            model_field=model_field,
+        )
+        # if isinstance(param_field_info, ParamFieldInfo):
+        #     try:
+        #         container.add_param(
+        #             annotation=annotation,
+        #             field_info=param_field_info,
+        #             name=param_name,
+        #             default=default,
+        #             default_factory=param_field_info.default_factory,
+        #         )
+        #     except AnnotationContainerAddFieldError as annotation_container_add_field_error:
+        #         raise RequestParamError(handler=handler) from annotation_container_add_field_error
 
-        else:  # pragma: no cover
-            raise
+        # else:  # pragma: no cover
+        #     raise
 
     return container

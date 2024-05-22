@@ -6,7 +6,8 @@ from pydantic import BaseModel
 from typing_extensions import Annotated, get_args, get_origin
 
 from rapidy._client_errors import _create_handler_attr_info_msg
-from rapidy.request_params import ParamFieldInfo
+from rapidy._fields import ModelField, create_field
+from rapidy.request_params import ParamFieldInfo, create_param_model_field_by_request_param
 from rapidy.typedefs import Handler, Required, Undefined
 
 
@@ -129,6 +130,8 @@ def _get_annotation_data_by_default_value_flow(
 
 
 def _get_annotation_data(handler: Handler, param: Any) -> AnnotationData:
+    a = create_model_field_by_handler_signature_param(handler, param)
+
     annotation_origin = get_origin(param.annotation)
 
     if annotation_origin is Annotated:
@@ -163,9 +166,9 @@ def _prepare_field_info(raw_field_info: Union[ParamFieldInfo, Type[ParamFieldInf
 
 
 def _get_annotated_definition_attr_default(
+        param: inspect.Parameter,
         handler: Handler,
         type_: Any,
-        param: Any,
         field_info: ParamFieldInfo,
 ) -> Any:
     default_value_for_param_exists = param.default is not inspect.Signature.empty
@@ -238,7 +241,7 @@ def _get_annotated_definition_attr_default(
 def _get_default_definition_attr_default(
         handler: Handler,
         type_: Any,
-        param_name: str,
+        param: inspect.Parameter,
         field_info: ParamFieldInfo,
 ) -> Any:
     default_value_for_field_exists = check_default_value_for_field_exists(field_info)
@@ -253,28 +256,28 @@ def _get_default_definition_attr_default(
         raise ParameterCannotUseDefaultError(
             class_name=field_info.__class__.__name__,
             handler=handler,
-            param_name=param_name,
+            param_name=param.name,
         )
 
     if field_info.default_factory is not None and not can_default:
         raise ParameterCannotUseDefaultFactoryError(
             class_name=field_info.__class__.__name__,
             handler=handler,
-            param_name=param_name,
+            param_name=param.name,
         )
 
     if default_value_for_field_exists and not default_is_none and param_is_optional:
         raise SpecifyBothDefaultAndOptionalError(
             class_name=field_info.__class__.__name__,
             handler=handler,
-            param_name=param_name,
+            param_name=param.name,
         )
 
     if default_factory_for_field_exists and param_is_optional:
         raise SpecifyBothDefaultFactoryAndOptionalError(
             class_name=field_info.__class__.__name__,
             handler=handler,
-            param_name=param_name,
+            param_name=param.name,
         )
 
     if param_is_optional:
@@ -332,7 +335,6 @@ def extract_handler_attr_annotations(
 
         if get_origin(annotation_data.type_) is Union:
             union_attributes = get_args(annotation_data.type_)
-            union_attributes = (union_attributes[1], union_attributes[0])
 
             _raise_if_unsupported_union_schema_data_type(union_attributes, handler=handler, param_name=param.name)
 
@@ -342,6 +344,79 @@ def extract_handler_attr_annotations(
 
     return annotation_data
 
+
+
+# TODO: может объединить в один, просто дефолт кидать? или выставлять его просто выше в FieldInfo
+def create_model_field_by_annotated_flow(
+        param: inspect.Parameter,
+        param_type: Any,
+        param_field_info: ParamFieldInfo,
+        handler: Handler,
+) -> ModelField:
+    default = _get_annotated_definition_attr_default(  # TODO: апдейтить дефолт тут?
+        handler=handler,
+        type_=param_type,
+        field_info=param_field_info,
+        param=param,
+    )
+
+    param_field_info.default = default
+
+    return create_field(
+        name=param.name,
+        type_=param_type,
+        field_info=param_field_info,
+    )
+
+
+def create_model_field_by_handler_signature_param(handler: Handler, param: inspect.Parameter) -> ModelField:
+    annotation_origin = get_origin(param.annotation)
+
+    if annotation_origin is Annotated:
+        annotated_args = get_args(param.annotation)
+        if len(annotated_args) != 2:
+            raise NotParameterError
+
+        type_, param_field_info = annotated_args
+        prepared_param_field_info = _prepare_field_info(param_field_info)
+        default = _get_annotated_definition_attr_default(
+            param=param, handler=handler, type_=type_, field_info=prepared_param_field_info,
+        )
+
+    else:
+        if param.default is inspect.Signature.empty:
+            raise NotParameterError
+
+        type_, param_field_info = param.annotation, param.default
+        prepared_param_field_info = _prepare_field_info(param_field_info)
+        default = _get_default_definition_attr_default(
+            param=param, handler=handler, type_=param.annotation, field_info=prepared_param_field_info,
+        )
+
+    if not isinstance(prepared_param_field_info, ParamFieldInfo):
+        raise Exception  # TODO
+
+    prepared_param_field_info.default = default
+
+    # TODO: ModelField будет создан и только под извлекающиеся -> похуй это для единообразия
+    #  просто не будем дергать метод валидации, чисто дефолт достанем
+
+    # TODO: некоторые типы данных не будут поддержаны пидантиком -> что с ними делать?
+
+    # TODO: нужен ли метод create_param_model_field_by_request_param - или это костыль FastApi
+    return create_param_model_field_by_request_param(
+        annotated_type=type_,
+        field_info=prepared_param_field_info,
+        param_name=param.name,
+        param_default=prepared_param_field_info.default,
+        param_default_factory=prepared_param_field_info.default_factory,
+    )
+
+    # return create_field(
+    #     name=param.name,
+    #     type_=type_,
+    #     field_info=prepared_param_field_info,
+    # )
 
 def is_optional(field):  # TODO: type
     if not get_origin(field) is Union:
