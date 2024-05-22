@@ -67,11 +67,11 @@ class PathBase(ParamFieldInfo):
 
 
 class Path(PathBase):
-    validate_type = ValidateType.param
+    validate_type = ValidateType.single_param
 
 
 class PathSchema(PathBase):
-    validate_type = ValidateType.schema
+    validate_type = ValidateType.complex_param
 
 
 class PathRaw(PathBase):
@@ -84,16 +84,15 @@ class HeaderBase(ParamFieldInfo):
 
 
 class Header(HeaderBase):
-    validate_type = ValidateType.param
+    validate_type = ValidateType.single_param
 
 
 class HeaderSchema(HeaderBase):
-    validate_type = ValidateType.schema
+    validate_type = ValidateType.complex_param
 
 
 class HeaderRaw(HeaderBase):
     validate_type = ValidateType.no_validate
-    can_default = False
 
 
 class CookieBase(ParamFieldInfo):
@@ -102,16 +101,15 @@ class CookieBase(ParamFieldInfo):
 
 
 class Cookie(CookieBase):
-    validate_type = ValidateType.param
+    validate_type = ValidateType.single_param
 
 
 class CookieSchema(CookieBase):
-    validate_type = ValidateType.schema
+    validate_type = ValidateType.complex_param
 
 
 class CookieRaw(CookieBase):
     validate_type = ValidateType.no_validate
-    can_default = False
 
 
 class QueryBase(ParamFieldInfo):
@@ -120,16 +118,15 @@ class QueryBase(ParamFieldInfo):
 
 
 class Query(QueryBase):
-    validate_type = ValidateType.param
+    validate_type = ValidateType.single_param
 
 
 class QuerySchema(QueryBase):
-    validate_type = ValidateType.schema
+    validate_type = ValidateType.complex_param
 
 
 class QueryRaw(QueryBase):
     validate_type = ValidateType.no_validate
-    can_default = False
 
 
 class BodyBase(ParamFieldInfo, ABC):
@@ -201,7 +198,7 @@ class JsonBodyBase(BodyBase):
 
 
 class JsonBody(JsonBodyBase):
-    validate_type = ValidateType.param
+    validate_type = ValidateType.single_param
 
     def __init__(
             self,
@@ -228,12 +225,11 @@ class JsonBody(JsonBodyBase):
 
 
 class JsonBodySchema(JsonBodyBase):
-    validate_type = ValidateType.schema
+    validate_type = ValidateType.complex_param
 
 
 class JsonBodyRaw(JsonBodyBase):
     validate_type = ValidateType.no_validate
-    can_default = False
 
 
 class FormDataBodyBase(BodyBase):
@@ -264,7 +260,7 @@ class FormDataBodyBase(BodyBase):
 
 
 class FormDataBody(FormDataBodyBase):
-    validate_type = ValidateType.param
+    validate_type = ValidateType.single_param
 
     def __init__(
             self,
@@ -298,12 +294,11 @@ class FormDataBody(FormDataBodyBase):
 
 
 class FormDataBodySchema(FormDataBodyBase):
-    validate_type = ValidateType.schema
+    validate_type = ValidateType.complex_param
 
 
 class FormDataBodyRaw(FormDataBodyBase):
     validate_type = ValidateType.no_validate
-    can_default = False
 
 
 class MultipartBodyBase(BodyBase):
@@ -334,7 +329,7 @@ class MultipartBodyBase(BodyBase):
 
 
 class MultipartBody(MultipartBodyBase):
-    validate_type = ValidateType.param
+    validate_type = ValidateType.single_param
 
     def __init__(
             self,
@@ -368,12 +363,11 @@ class MultipartBody(MultipartBodyBase):
 
 
 class MultipartBodySchema(MultipartBodyBase):
-    validate_type = ValidateType.schema
+    validate_type = ValidateType.complex_param
 
 
 class MultipartBodyRaw(MultipartBodyBase):
     validate_type = ValidateType.no_validate
-    can_default = False
 
 
 def create_param_model_field_by_request_param(

@@ -89,7 +89,7 @@ async def test_check_simple_param_incorrect_annotations(
         param_2: Type[HeaderBase],
         create_handler_func: Any,
 ) -> None:
-    if param_1.validate_type.is_param() and param_2.validate_type.is_param():
+    if param_1.validate_type.is_single_param() and param_2.validate_type.is_single_param():
         # skip success scenarios
         return
 
@@ -121,7 +121,7 @@ async def test_check_body_param_incorrect_annotations(
         param_2: Type[BodyBase],
         create_handler_func: Any,
 ) -> None:
-    params_is_single = param_1.validate_type.is_param() and param_2.validate_type.is_param()
+    params_is_single = param_1.validate_type.is_single_param() and param_2.validate_type.is_single_param()
     params_has_one_media_type = param_1.media_type == param_2.media_type
 
     if params_is_single and params_has_one_media_type:

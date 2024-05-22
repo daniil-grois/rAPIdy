@@ -4,10 +4,11 @@ from types import FunctionType
 from typing import Any, Dict, Iterator, Optional, Set, Type, Union
 
 from aiohttp.web_request import Request
-from typing_extensions import get_args
+from typing_extensions import get_args, get_origin
 
 from rapidy._annotation_extractor import extract_handler_attr_annotations, NotParameterError
-from rapidy._client_errors import _create_handler_attr_info_msg, _create_handler_info_msg, ExtractError
+from rapidy._client_errors import _create_handler_attr_info_msg, _create_handler_info_msg, ExtractError, \
+    RequiredFieldIsMissing
 from rapidy._fields import ModelField
 from rapidy._validators import validate_request_param_data
 from rapidy.request_params import create_param_model_field_by_request_param, ParamFieldInfo, ParamType, ValidateType
@@ -66,10 +67,7 @@ class ParamAnnotationContainer(ABC):
         self._param_type = param_type
 
     @abstractmethod
-    async def get_request_data(  # noqa: WPS463
-            self,
-            request: Request,
-    ) -> ValidateReturn:  # pragma: no cover
+    async def get_request_data(self, request: Request) -> ValidateReturn:  # noqa: WPS463 # pragma: no cover
         pass
 
     @abstractmethod
@@ -91,6 +89,7 @@ class ParamAnnotationContainerOnlyExtract(ParamAnnotationContainer):
         self._param_default = None
         self._param_default_factory = None
         self._is_defined = False
+        self._is_optional = False
 
     def add_field(
             self,
@@ -103,12 +102,14 @@ class ParamAnnotationContainerOnlyExtract(ParamAnnotationContainer):
         if self._is_defined:
             raise AnnotationContainerAddFieldError
 
+        if get_origin(annotation) is Union:
+            union_attributes = get_args(annotation)
+            if type(None) in union_attributes:
+                self._is_optional = True
+
         self._is_defined = True
 
-    async def get_request_data(
-            self,
-            request: Request,
-    ) -> ValidateReturn:
+    async def get_request_data(self, request: Request) -> ValidateReturn:
         raw_data = request._cache.get(self._param_type)  # FIXME: cache management should be centralized
         if raw_data:
             return raw_data
@@ -117,6 +118,12 @@ class ParamAnnotationContainerOnlyExtract(ParamAnnotationContainer):
             raw_data = await self._extractor(request)
         except ExtractError as exc:
             return {}, [exc.get_error_info(loc=(self._param_type,))]
+
+        if raw_data is None:
+            if self._is_optional:
+                return {self._param_name: None}, []
+
+            return {}, [RequiredFieldIsMissing().get_error_info(loc=(self._param_type,))]
 
         request._cache[self._param_type] = raw_data  # FIXME: cache management should be centralized
 
@@ -130,10 +137,7 @@ class ValidateParamAnnotationContainer(ParamAnnotationContainer, ABC):
         super().__init__(extractor=extractor, param_type=param_type)
         self._map_model_fields_by_alias: Dict[str, ModelField] = {}
 
-    async def get_request_data(
-            self,
-            request: Request,
-    ) -> ValidateReturn:
+    async def get_request_data(self, request: Request) -> ValidateReturn:
         raw_data = request._cache.get(self._param_type)  # FIXME: cache management should be centralized
         if not raw_data:
             try:
@@ -223,10 +227,10 @@ def param_factory(
     if validate_type.is_no_validate():
         return ParamAnnotationContainerOnlyExtract(extractor=extractor, param_type=param_type, param_name=param_name)
 
-    if validate_type.is_schema():
+    if validate_type.is_complex_param():
         return ParamAnnotationContainerValidateSchema(extractor=extractor, param_type=param_type)
 
-    if validate_type.is_param():
+    if validate_type.is_single_param():
         return ParamAnnotationContainerValidateParams(extractor=extractor, param_type=param_type)
 
     raise  # pragma: no cover

@@ -31,7 +31,7 @@ def _validate_data_by_field(
 
 def validate_request_param_data(
         required_fields_map: Dict[str, ModelField],
-        raw_data: DictStrAny,
+        raw_data: Optional[DictStrAny],
         is_single_model: bool,
 ) -> Tuple[DictStrAny, List[Any]]:
     loc: Tuple[str, ...]
@@ -44,7 +44,7 @@ def validate_request_param_data(
         loc = (rapid_param_type,)
 
         validated_data, validated_errors = _validate_data_by_field(
-            raw_data=raw_data if raw_data else None,
+            raw_data=raw_data,
             values={},
             loc=loc,
             model_field=model_field,
@@ -61,7 +61,7 @@ def validate_request_param_data(
         rapid_param_type = cast(str, model_field.rapid_param_type)
 
         loc = (rapid_param_type, model_field.alias)
-        raw_param_data = raw_data.get(required_field_name)
+        raw_param_data = raw_data.get(required_field_name) if raw_data is not None else None
 
         validated_data, validated_errors = _validate_data_by_field(
             raw_data=raw_param_data,

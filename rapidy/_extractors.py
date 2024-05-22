@@ -24,34 +24,48 @@ async def extract_path(request: Request) -> DictStrStr:
     return dict(request.match_info)
 
 
-async def extract_headers(request: Request) -> DictStrStr:
+async def extract_headers(request: Request) -> Optional[DictStrStr]:
+    headers = request.headers
+    if not headers:
+        return None
+
     return parse_multi_params(request.headers)  # type: ignore[return-value]
 
 
-async def extract_cookies(request: Request) -> DictStrStr:
+async def extract_cookies(request: Request) -> Optional[DictStrStr]:
     cookies = request.cookies
+    if not cookies:
+        return None
+
     return dict(cookies)
 
 
-async def extract_query(request: Request) -> DictStrStr:
-    return parse_multi_params(request.rel_url.query)  # type: ignore[return-value]
+async def extract_query(request: Request) -> Optional[DictStrStr]:
+    query = request.rel_url.query
+    if not query:
+        return None
+
+    return parse_multi_params(query)  # type: ignore[return-value]
 
 
-async def extract_body_stream(request: Request, max_size: int) -> StreamReader:
+async def extract_body_stream(request: Request, max_size: int) -> Optional[StreamReader]:
+    if not request.body_exists:
+        return None
+
     # TODO: custom StreamReader with body_max_size
     return request.content
 
 
-async def extract_body_bytes(request: Request, max_size: int) -> bytes:
+async def extract_body_bytes(request: Request, max_size: int) -> Optional[bytes]:
     if not request.body_exists:
-        return b''
+        return None
 
     return await _read_full_body(request=request, max_size=max_size)
 
 
-async def extract_body_text(request: Request, max_size: int) -> str:
+async def extract_body_text(request: Request, max_size: int) -> Optional[str]:
     if not request.body_exists:
-        return ''
+        return None
 
     return await _read_body_text(request=request, max_size=max_size)
 
@@ -60,9 +74,9 @@ async def extract_body_json(
         request: Request,
         max_size: int,
         json_decoder: JSONDecoder,
-) -> DictStrAny:
+) -> Optional[DictStrAny]:
     if not request.body_exists:
-        return {}
+        return None
 
     text_body = await extract_body_text(request=request, max_size=max_size)
     try:
@@ -76,9 +90,9 @@ async def extract_body_x_www_form(
         max_size: int,
         attrs_case_sensitive: bool,
         duplicated_attrs_parse_as_array: bool,
-) -> Union[DictStrStr, DictStrListStr]:
+) -> Optional[Union[DictStrStr, DictStrListStr]]:
     if not request.body_exists:
-        return {}
+        return None
 
     text_body = await extract_body_text(request=request, max_size=max_size)
     unquotes_text = unquote(text_body)
@@ -110,9 +124,9 @@ async def extract_body_multi_part(
         max_size: int,
         attrs_case_sensitive: bool,
         duplicated_attrs_parse_as_array: bool,
-) -> Union[DictStrAny, DictStrListAny]:
+) -> Optional[Union[DictStrAny, DictStrListAny]]:
     if not request.body_exists:
-        return {}
+        return None
 
     multipart_reader = await _get_multipart_reader(request)
 

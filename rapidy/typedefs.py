@@ -54,7 +54,7 @@ DictStrListStr = Dict[str, List[str]]
 Handler = Callable[..., Awaitable['StreamResponse']]
 MethodHandler = Callable[..., Awaitable['StreamResponse']]
 HandlerType = Union[Handler, Type[AbstractView]]
-Middleware = Callable[[Request, Handler], Awaitable['StreamResponse']]
+Middleware = Callable[[Request, Handler], Awaitable['StreamResponse']]  # TODO: ...
 
 HandlerOrMethod = Union[Handler, MethodHandler]
 

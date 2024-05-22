@@ -64,11 +64,13 @@ cant_default_params = [
     pytest.param(Dict[str, Any], Path, id='path-param'),
     pytest.param(Dict[str, Any], PathSchema, id='path-schema'),
     pytest.param(Dict[str, Any], PathRaw, id='path-raw'),
-    pytest.param(Dict[str, Any], CookieRaw, id='cookie-raw'),
-    pytest.param(Dict[str, Any], QueryRaw, id='query-raw'),
-    pytest.param(Dict[str, Any], JsonBodyRaw, id='body-json-raw'),
-    pytest.param(Dict[str, Any], FormDataBodyRaw, id='body-form-data-raw'),
-    pytest.param(Dict[str, Any], MultipartBodyRaw, id='body-multipart-raw'),
+
+    # TODO: перенести в др колонку
+    # pytest.param(Dict[str, Any], CookieRaw, id='cookie-raw'),
+    # pytest.param(Dict[str, Any], QueryRaw, id='query-raw'),
+    # pytest.param(Dict[str, Any], JsonBodyRaw, id='body-json-raw'),
+    # pytest.param(Dict[str, Any], FormDataBodyRaw, id='body-form-data-raw'),
+    # pytest.param(Dict[str, Any], MultipartBodyRaw, id='body-multipart-raw'),
     pytest.param(str, TextBody, id='body-text'),
     pytest.param(bytes, BytesBody, id='body-bytes'),
 ]
@@ -99,13 +101,13 @@ no_values_no_default_params = [
     pytest.param(Schema, JsonBodySchema, None, HTTPStatus.UNPROCESSABLE_ENTITY, id='body-json-schema'),
     pytest.param(Schema, FormDataBodySchema, None, HTTPStatus.UNPROCESSABLE_ENTITY, id='body-form-data-schema'),
     pytest.param(Schema, MultipartBodySchema, None, HTTPStatus.UNPROCESSABLE_ENTITY, id='body-multipart-schema'),
-    pytest.param(Dict[str, Any], CookieRaw, {}, HTTPStatus.OK, id='cookie-raw'),
-    pytest.param(Dict[str, Any], QueryRaw, {}, HTTPStatus.OK, id='query-raw'),
-    pytest.param(Dict[str, Any], JsonBodyRaw, {}, HTTPStatus.OK, id='body-json-raw'),
-    pytest.param(Dict[str, Any], FormDataBodyRaw, {}, HTTPStatus.OK, id='body-form-data-raw'),
-    pytest.param(Dict[str, Any], MultipartBodyRaw, {}, HTTPStatus.OK, id='body-multipart-raw'),
-    pytest.param(str, TextBody, '', HTTPStatus.OK, id='body-text'),
-    pytest.param(bytes, BytesBody, b'', HTTPStatus.OK, id='body-bytes'),
+    pytest.param(Dict[str, Any], CookieRaw, None, HTTPStatus.UNPROCESSABLE_ENTITY, id='cookie-raw'),
+    pytest.param(Dict[str, Any], QueryRaw, None, HTTPStatus.UNPROCESSABLE_ENTITY, id='query-raw'),
+    pytest.param(Dict[str, Any], JsonBodyRaw, None, HTTPStatus.UNPROCESSABLE_ENTITY, id='body-json-raw'),
+    pytest.param(Dict[str, Any], FormDataBodyRaw, None, HTTPStatus.UNPROCESSABLE_ENTITY, id='body-form-data-raw'),
+    pytest.param(Dict[str, Any], MultipartBodyRaw, None, HTTPStatus.UNPROCESSABLE_ENTITY, id='body-multipart-raw'),
+    pytest.param(str, TextBody, None, HTTPStatus.UNPROCESSABLE_ENTITY, id='body-text'),
+    pytest.param(bytes, BytesBody, None, HTTPStatus.UNPROCESSABLE_ENTITY, id='body-bytes'),
 ]
 
 schema_one_param_exist_second_param_is_default_params = [
@@ -253,27 +255,28 @@ async def test_success_default_factory(
         await _test(aiohttp_client, handler, {}, HTTPStatus.OK)
 
 
-@pytest.mark.parametrize('type_, param', default_params)
-async def test_success_optional_default_factory(
-        aiohttp_client: AiohttpClient,
-        *,
-        type_: Any,
-        param: Any,
-) -> None:
-    async def handler_1(
-            data: Annotated[Optional[type_], param(default_factory=lambda: None)],
-    ) -> web.Response:
-        assert data is None
-        return web.Response()
-
-    async def handler_2(
-            data: Optional[type_] = param(default_factory=lambda: None),
-    ) -> web.Response:
-        assert data is None
-        return web.Response()
-
-    for handler in (handler_1, handler_2):
-        await _test(aiohttp_client, handler, {}, HTTPStatus.OK)
+# TODO: переписать на неуспешный
+# @pytest.mark.parametrize('type_, param', default_params)
+# async def test_success_optional_default_factory(
+#         aiohttp_client: AiohttpClient,
+#         *,
+#         type_: Any,
+#         param: Any,
+# ) -> None:
+#     async def handler_1(
+#             data: Annotated[Optional[type_], param(default_factory=lambda: None)],
+#     ) -> web.Response:
+#         assert data is None
+#         return web.Response()
+#
+#     async def handler_2(
+#             data: Optional[type_] = param(default_factory=lambda: None),
+#     ) -> web.Response:
+#         assert data is None
+#         return web.Response()
+#
+#     for handler in (handler_1, handler_2):
+#         await _test(aiohttp_client, handler, {}, HTTPStatus.OK)
 
 
 @pytest.mark.parametrize('type_, param, expected_data, resp_code', no_values_no_default_params)

@@ -50,6 +50,26 @@ class SpecifyBothDefaultAndDefaultFactoryError(TypeError):
         )
 
 
+class SpecifyBothDefaultAndOptionalError(TypeError):
+    _base_err_msg = 'A parameter cannot be optional if it contains a default value in `{class_name}`.'
+
+    def __init__(self, *args: Any, class_name: str, handler: Any, param_name: str) -> None:
+        super().__init__(
+            f'{self._base_err_msg.format(class_name=class_name)}\n{_create_handler_attr_info_msg(handler, param_name)}',
+            *args,
+        )
+
+
+class SpecifyBothDefaultFactoryAndOptionalError(TypeError):
+    _base_err_msg = 'A parameter cannot be optional if it contains a default factory in `{class_name}`.'
+
+    def __init__(self, *args: Any, class_name: str, handler: Any, param_name: str) -> None:
+        super().__init__(
+            f'{self._base_err_msg.format(class_name=class_name)}\n{_create_handler_attr_info_msg(handler, param_name)}',
+            *args,
+        )
+
+
 class IncorrectDefineDefaultValueError(Exception):
     _base_err_msg = (
         'Default value cannot be set in `{class_name}`. '
@@ -77,7 +97,12 @@ def _get_annotation_data_by_annotated_flow(
         handler: Handler,
         param: inspect.Parameter,
 ) -> AnnotationData:
-    default = _get_annotated_definition_attr_default(handler=handler, field_info=param_field_info, param=param)
+    default = _get_annotated_definition_attr_default(
+        handler=handler,
+        type_=attr_type,
+        field_info=param_field_info,
+        param=param,
+    )
     return AnnotationData(
         type_=attr_type,
         param_field_info=param_field_info,
@@ -90,7 +115,12 @@ def _get_annotation_data_by_default_value_flow(
         param: inspect.Parameter,
 ) -> AnnotationData:
     param_field_info = _prepare_field_info(param.default)
-    default = _get_default_definition_attr_default(handler=handler, field_info=param_field_info, param_name=param.name)
+    default = _get_default_definition_attr_default(
+        handler=handler,
+        type_=param.annotation,
+        field_info=param_field_info,
+        param_name=param.name,
+    )
     return AnnotationData(
         type_=param.annotation,
         param_field_info=param_field_info,
@@ -98,10 +128,7 @@ def _get_annotation_data_by_default_value_flow(
     )
 
 
-def _get_annotation_data(
-        handler: Handler,
-        param: Any,
-) -> AnnotationData:
+def _get_annotation_data(handler: Handler, param: Any) -> AnnotationData:
     annotation_origin = get_origin(param.annotation)
 
     if annotation_origin is Annotated:
@@ -137,15 +164,17 @@ def _prepare_field_info(raw_field_info: Union[ParamFieldInfo, Type[ParamFieldInf
 
 def _get_annotated_definition_attr_default(
         handler: Handler,
+        type_: Any,
         param: Any,
         field_info: ParamFieldInfo,
 ) -> Any:
     default_value_for_param_exists = param.default is not inspect.Signature.empty
-    default_value_for_field_exists = not (field_info.default is Undefined or field_info.default is Required)
-    default_factory_for_field_exists = field_info.default_factory is not None
+    default_value_for_field_exists = check_default_value_for_field_exists(field_info)
+    default_factory_for_field_exists = check_default_factory_for_field_exists(field_info)
 
     default_exists = default_value_for_param_exists or default_value_for_field_exists
-    can_default = field_info.can_default and not field_info.validate_type.is_no_validate()
+    can_default = field_info.can_default and not field_info.validate_type.is_no_validate()  # TODO: почему этой проверки нет в дефолте
+    param_is_optional = is_optional(type_)
 
     if default_exists and not can_default:
         raise ParameterCannotUseDefaultError(
@@ -184,15 +213,41 @@ def _get_annotated_definition_attr_default(
     elif default_value_for_field_exists:
         default = field_info.default
 
+    elif param_is_optional:
+        default = None
+
+    default_is_none = default is None
+
+    if default_value_for_field_exists and not default_is_none and param_is_optional:
+        raise SpecifyBothDefaultAndOptionalError(
+            class_name=field_info.__class__.__name__,
+            handler=handler,
+            param_name=param.name,
+        )
+
+    if default_factory_for_field_exists and param_is_optional:
+        raise SpecifyBothDefaultFactoryAndOptionalError(
+            class_name=field_info.__class__.__name__,
+            handler=handler,
+            param_name=param.name,
+        )
+
     return default
 
 
 def _get_default_definition_attr_default(
         handler: Handler,
+        type_: Any,
         param_name: str,
         field_info: ParamFieldInfo,
 ) -> Any:
+    default_value_for_field_exists = check_default_value_for_field_exists(field_info)
+    default_factory_for_field_exists = check_default_factory_for_field_exists(field_info)
+
     can_default = field_info.can_default
+
+    param_is_optional = is_optional(type_)
+    default_is_none = field_info.default is None
 
     if field_info.default is not Undefined and not can_default:
         raise ParameterCannotUseDefaultError(
@@ -207,6 +262,23 @@ def _get_default_definition_attr_default(
             handler=handler,
             param_name=param_name,
         )
+
+    if default_value_for_field_exists and not default_is_none and param_is_optional:
+        raise SpecifyBothDefaultAndOptionalError(
+            class_name=field_info.__class__.__name__,
+            handler=handler,
+            param_name=param_name,
+        )
+
+    if default_factory_for_field_exists and param_is_optional:
+        raise SpecifyBothDefaultFactoryAndOptionalError(
+            class_name=field_info.__class__.__name__,
+            handler=handler,
+            param_name=param_name,
+        )
+
+    if param_is_optional:
+        return None
 
     return field_info.default
 
@@ -255,16 +327,31 @@ def extract_handler_attr_annotations(
 ) -> AnnotationData:
     annotation_data = _get_annotation_data(handler, param)
 
-    if annotation_data.param_field_info.validate_type.is_schema():
+    if annotation_data.param_field_info.validate_type.is_complex_param():
         checked_annotation_type = annotation_data.type_
 
         if get_origin(annotation_data.type_) is Union:
             union_attributes = get_args(annotation_data.type_)
+            union_attributes = (union_attributes[1], union_attributes[0])
 
             _raise_if_unsupported_union_schema_data_type(union_attributes, handler=handler, param_name=param.name)
 
-            checked_annotation_type = union_attributes[1] if union_attributes[0] is None else union_attributes[0]
+            checked_annotation_type = union_attributes[1] if union_attributes[0] == type(None) else union_attributes[0]
 
         _raise_if_unsupported_annotation_type(checked_annotation_type, handler=handler, param_name=param.name)
 
     return annotation_data
+
+
+def is_optional(field):  # TODO: type
+    if not get_origin(field) is Union:
+        return False
+
+    return type(None) in get_args(field)
+
+
+def check_default_value_for_field_exists(field_info: ParamFieldInfo) -> bool:
+    return not (field_info.default is Undefined or field_info.default is Required)
+
+def check_default_factory_for_field_exists(field_info: ParamFieldInfo) -> bool:
+    return field_info.default_factory is not None

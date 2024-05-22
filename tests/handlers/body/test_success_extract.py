@@ -132,8 +132,10 @@ async def test_form_data_attributes(
         attrs_case_sensitive=attrs_case_sensitive,
     )
 
+    body_type = Dict[str, list[str]] if duplicated_attrs_parse_as_array else Dict[str, str]
+
     async def handler(
-            body_data: Annotated[Dict[str, str], body_param],
+            body_data: Annotated[body_type, body_param],
     ) -> web.Response:
         assert body_data == expected_body_data
         return web.Response()
@@ -228,8 +230,10 @@ async def test_multipart_attributes(
         attrs_case_sensitive=attrs_case_sensitive,
     )
 
+    body_type = Dict[str, list[str]] if duplicated_attrs_parse_as_array else Dict[str, str]
+
     async def handler(
-            body_data: Annotated[Dict[str, str], body_param],
+            body_data: Annotated[body_type, body_param],
     ) -> web.Response:
         assert body_data == expected_body_data
         return web.Response()
@@ -243,7 +247,6 @@ async def test_multipart_attributes(
 
     resp = await client.post('/', data=multipart_writer)
     assert resp.status == HTTPStatus.OK
-
 
 async def test_body_text(aiohttp_client: AiohttpClient) -> None:
     async def handler(
