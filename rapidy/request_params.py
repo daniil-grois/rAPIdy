@@ -19,34 +19,20 @@ from rapidy._extractors import (
     extract_query,
 )
 from rapidy._fields import create_field, get_annotation_from_field_info, ModelField, ParamFieldInfo
-from rapidy._request_params_base import ParamType, ValidateType
+from rapidy._request_params_base import HTTPRequestParamType
 from rapidy.constants import MAX_BODY_SIZE
 from rapidy.media_types import ApplicationBytes, ApplicationJSON, ApplicationXWWWForm, MultipartForm, TextPlain
 from rapidy.typedefs import NoArgAnyCallable, Required, Undefined
 
 __all__ = (
-    'BytesBody',
-    'Cookie',
-    'CookieSchema',
-    'CookieRaw',
-    'FormDataBody',
-    'FormDataBodySchema',
-    'FormDataBodyRaw',
-    'Header',
-    'HeaderSchema',
-    'HeaderRaw',
-    'JsonBody',
-    'JsonBodySchema',
-    'JsonBodyRaw',
-    'MultipartBody',
-    'MultipartBodySchema',
-    'MultipartBodyRaw',
     'Path',
-    'PathSchema',
-    'PathRaw',
+    'Header',
+    'Cookie',
     'Query',
-    'QuerySchema',
-    'QueryRaw',
+    'JsonBody',
+    'FormDataBody',
+    'MultipartBody',
+    'BytesBody',
     'StreamBody',
     'TextBody',
 )
@@ -60,77 +46,29 @@ class DefaultDefinitionError(Exception):
     pass
 
 
-class PathBase(ParamFieldInfo):
-    param_type = ParamType.path
+class Path(ParamFieldInfo):
+    http_request_param_type = HTTPRequestParamType.path
     extractor = staticmethod(extract_path)
     can_default = False
 
 
-class Path(PathBase):
-    validate_type = ValidateType.single_param
-
-
-class PathSchema(PathBase):
-    validate_type = ValidateType.complex_param
-
-
-class PathRaw(PathBase):
-    validate_type = ValidateType.no_validate
-
-
-class HeaderBase(ParamFieldInfo):
-    param_type = ParamType.header
+class Header(ParamFieldInfo):
+    http_request_param_type = HTTPRequestParamType.header
     extractor = staticmethod(extract_headers)
 
 
-class Header(HeaderBase):
-    validate_type = ValidateType.single_param
-
-
-class HeaderSchema(HeaderBase):
-    validate_type = ValidateType.complex_param
-
-
-class HeaderRaw(HeaderBase):
-    validate_type = ValidateType.no_validate
-
-
-class CookieBase(ParamFieldInfo):
-    param_type = ParamType.cookie
+class Cookie(ParamFieldInfo):
+    http_request_param_type = HTTPRequestParamType.cookie
     extractor = staticmethod(extract_cookies)
 
 
-class Cookie(CookieBase):
-    validate_type = ValidateType.single_param
-
-
-class CookieSchema(CookieBase):
-    validate_type = ValidateType.complex_param
-
-
-class CookieRaw(CookieBase):
-    validate_type = ValidateType.no_validate
-
-
-class QueryBase(ParamFieldInfo):
-    param_type = ParamType.query
+class Query(ParamFieldInfo):
+    http_request_param_type = HTTPRequestParamType.query
     extractor = staticmethod(extract_query)
 
 
-class Query(QueryBase):
-    validate_type = ValidateType.single_param
-
-
-class QuerySchema(QueryBase):
-    validate_type = ValidateType.complex_param
-
-
-class QueryRaw(QueryBase):
-    validate_type = ValidateType.no_validate
-
-
 class BodyBase(ParamFieldInfo, ABC):
-    param_type = ParamType.body
+    http_request_param_type = HTTPRequestParamType.body
     media_type: str
 
     def __init__(
@@ -153,25 +91,23 @@ class BodyBase(ParamFieldInfo, ABC):
 class StreamBody(BodyBase):
     media_type = ApplicationBytes
     extractor = staticmethod(extract_body_stream)
-    validate_type = ValidateType.no_validate
     can_default = False
+    only_raw = True
 
 
 class BytesBody(BodyBase):
     media_type = ApplicationBytes
     extractor = staticmethod(extract_body_bytes)
-    validate_type = ValidateType.no_validate
-    can_default = False
+    only_raw = True
 
 
 class TextBody(BodyBase):
     media_type = TextPlain
     extractor = staticmethod(extract_body_text)
-    validate_type = ValidateType.no_validate
-    can_default = False
+    only_raw = True
 
 
-class JsonBodyBase(BodyBase):
+class JsonBody(BodyBase):
     media_type = ApplicationJSON
     extractor = staticmethod(extract_body_json)
 
@@ -180,8 +116,8 @@ class JsonBodyBase(BodyBase):
             default: Any = Undefined,
             *,
             default_factory: Optional[NoArgAnyCallable] = None,
-            body_max_size: Optional[int] = None,
-            json_decoder: Optional[JSONDecoder] = None,
+            body_max_size: Optional[int] = None,  # TODO: убрать поле
+            json_decoder: Optional[JSONDecoder] = None,  # TODO: убрать поле
             **field_info_kwargs: Any,
     ) -> None:
         self.extractor = partial(  # noqa: WPS601
@@ -197,42 +133,7 @@ class JsonBodyBase(BodyBase):
         )
 
 
-class JsonBody(JsonBodyBase):
-    validate_type = ValidateType.single_param
-
-    def __init__(
-            self,
-            default: Any = Undefined,
-            *,
-            default_factory: Optional[NoArgAnyCallable] = None,
-            body_max_size: Optional[int] = None,
-            json_decoder: Optional[JSONDecoder] = None,
-            **field_info_kwargs: Any,
-    ) -> None:
-        if body_max_size is not None or json_decoder is not None:
-            raise BodyParamAttrDefinitionError(
-                'A single JsonBody parameter does not allow to determine `body_max_size` or `json_decoder`. '
-                'Please use JsonSchema or JsonRaw.',
-            )
-
-        super().__init__(
-            default=default,
-            default_factory=default_factory,
-            body_max_size=body_max_size,
-            json_decoder=json_decoder,
-            **field_info_kwargs,
-        )
-
-
-class JsonBodySchema(JsonBodyBase):
-    validate_type = ValidateType.complex_param
-
-
-class JsonBodyRaw(JsonBodyBase):
-    validate_type = ValidateType.no_validate
-
-
-class FormDataBodyBase(BodyBase):
+class FormDataBody(BodyBase):
     media_type = ApplicationXWWWForm
 
     def __init__(
@@ -240,9 +141,9 @@ class FormDataBodyBase(BodyBase):
             default: Any = Undefined,
             *,
             default_factory: Optional[NoArgAnyCallable] = None,
-            body_max_size: Optional[int] = None,
-            attrs_case_sensitive: bool = False,
-            duplicated_attrs_parse_as_array: bool = False,
+            body_max_size: Optional[int] = None,  # TODO: убрать поле
+            attrs_case_sensitive: bool = False,  # TODO: убрать поле
+            duplicated_attrs_parse_as_array: bool = False,  # TODO: убрать поле
             **field_info_kwargs: Any,
     ) -> None:
         self.extractor = partial(
@@ -259,49 +160,7 @@ class FormDataBodyBase(BodyBase):
         )
 
 
-class FormDataBody(FormDataBodyBase):
-    validate_type = ValidateType.single_param
-
-    def __init__(
-            self,
-            default: Any = Undefined,
-            *,
-            default_factory: Optional[NoArgAnyCallable] = None,
-            body_max_size: Optional[int] = None,
-            attrs_case_sensitive: bool = False,
-            duplicated_attrs_parse_as_array: bool = False,
-            **field_info_kwargs: Any,
-    ) -> None:
-        if (
-            body_max_size is not None
-            or attrs_case_sensitive
-            or duplicated_attrs_parse_as_array
-        ):
-            raise BodyParamAttrDefinitionError(
-                'A single FormDataBody parameter does not allow to determine '
-                '`body_max_size` or `attrs_case_sensitive` or `duplicated_attrs_parse_as_array`. '
-                'Please use FormDataSchema or FormDataRaw.',
-            )
-
-        super().__init__(
-            default=default,
-            default_factory=default_factory,
-            body_max_size=body_max_size,
-            attrs_case_sensitive=attrs_case_sensitive,
-            duplicated_attrs_parse_as_array=duplicated_attrs_parse_as_array,
-            **field_info_kwargs,
-        )
-
-
-class FormDataBodySchema(FormDataBodyBase):
-    validate_type = ValidateType.complex_param
-
-
-class FormDataBodyRaw(FormDataBodyBase):
-    validate_type = ValidateType.no_validate
-
-
-class MultipartBodyBase(BodyBase):
+class MultipartBody(BodyBase):
     media_type = MultipartForm
 
     def __init__(
@@ -309,9 +168,9 @@ class MultipartBodyBase(BodyBase):
             default: Any = Undefined,
             *,
             default_factory: Optional[NoArgAnyCallable] = None,
-            body_max_size: Optional[int] = None,
-            attrs_case_sensitive: bool = False,
-            duplicated_attrs_parse_as_array: bool = False,
+            body_max_size: Optional[int] = None,  # TODO: убрать поле
+            attrs_case_sensitive: bool = False,  # TODO: убрать поле
+            duplicated_attrs_parse_as_array: bool = False,  # TODO: убрать поле
             **field_info_kwargs: Any,
     ) -> None:
         self.extractor = partial(
@@ -328,49 +187,7 @@ class MultipartBodyBase(BodyBase):
         )
 
 
-class MultipartBody(MultipartBodyBase):
-    validate_type = ValidateType.single_param
-
-    def __init__(
-            self,
-            default: Any = Undefined,
-            *,
-            default_factory: Optional[NoArgAnyCallable] = None,
-            body_max_size: Optional[int] = None,
-            attrs_case_sensitive: bool = False,
-            duplicated_attrs_parse_as_array: bool = False,
-            **field_info_kwargs: Any,
-    ) -> None:
-        if (
-            body_max_size is not None
-            or attrs_case_sensitive
-            or duplicated_attrs_parse_as_array
-        ):
-            raise BodyParamAttrDefinitionError(
-                'A single MultipartBody parameter does not allow to determine '
-                '`body_max_size` or `attrs_case_sensitive` or `duplicated_attrs_parse_as_array`. '
-                'Please use MultipartBodySchema or MultipartBodyRaw.',
-            )
-
-        super().__init__(
-            default=default,
-            default_factory=default_factory,
-            body_max_size=body_max_size,
-            attrs_case_sensitive=attrs_case_sensitive,
-            duplicated_attrs_parse_as_array=duplicated_attrs_parse_as_array,
-            **field_info_kwargs,
-        )
-
-
-class MultipartBodySchema(MultipartBodyBase):
-    validate_type = ValidateType.complex_param
-
-
-class MultipartBodyRaw(MultipartBodyBase):
-    validate_type = ValidateType.no_validate
-
-
-def create_param_model_field_by_request_param(
+def create_param_model_field_by_request_param(  # TODO: точно здесь?
         *,
         annotated_type: Any,
         field_info: ParamFieldInfo,
@@ -399,3 +216,8 @@ def create_param_model_field_by_request_param(
         type_=inner_attribute_type,
         field_info=copied_field_info,
     )
+
+# TODO: будет вызываться ошибка что Deprecation
+# TODO: проверить что указал все
+# TODO: в all тоже все прописать
+# TODO: не забыть про mypy

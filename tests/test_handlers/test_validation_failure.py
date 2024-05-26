@@ -7,18 +7,7 @@ from typing_extensions import Annotated, Final
 
 from rapidy import web
 from rapidy.constants import PYDANTIC_V1, PYDANTIC_V2
-from rapidy.request_params import (
-    Cookie,
-    CookieSchema,
-    Header,
-    HeaderSchema,
-    JsonBody,
-    JsonBodySchema,
-    Path,
-    PathSchema,
-    Query,
-    QuerySchema,
-)
+from rapidy.request_params import Cookie, Header, JsonBody, Path, Query
 from rapidy.typedefs import HandlerType
 
 HANDLER_PATH: Final[str] = '/{attr1}/{attr2}/{attr3}'
@@ -82,11 +71,11 @@ async def test_individual_params(aiohttp_client: AiohttpClient) -> None:
 
 async def test_single_schema(aiohttp_client: AiohttpClient) -> None:
     async def handler(
-            path_data: Annotated[Schema, PathSchema()],
-            header_data: Annotated[Schema, HeaderSchema()],
-            cookie_data: Annotated[Schema, CookieSchema()],
-            query_data: Annotated[Schema, QuerySchema()],
-            body_data: Annotated[Schema, JsonBodySchema()],
+            path_data: Annotated[Schema, Path(extract_all=True)],
+            header_data: Annotated[Schema, Header(extract_all=True)],
+            cookie_data: Annotated[Schema, Cookie(extract_all=True)],
+            query_data: Annotated[Schema, Query(extract_all=True)],
+            body_data: Annotated[Schema, JsonBody(extract_all=True)],
     ) -> web.Response:
         return web.Response()
 

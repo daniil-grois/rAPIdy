@@ -5,11 +5,10 @@ from rapidy._fields import ModelField
 from rapidy.typedefs import DictStrAny, ErrorWrapper
 
 
-def _validate_data_by_field(
+def _validate_data_by_field(  # TODO: rename?
         raw_data: Optional[Any],
         loc: Tuple[str, ...],
         model_field: ModelField,
-        *,
         values: DictStrAny,
 ) -> Tuple[Optional[Any], List[Any]]:
     if raw_data is None:
@@ -17,6 +16,9 @@ def _validate_data_by_field(
             return values, [RequiredFieldIsMissing().get_error_info(loc=loc)]
 
         return model_field.get_default(), []
+
+    if not model_field.field_info.validate:
+        return raw_data, []
 
     validated_data, validated_errors = model_field.validate(raw_data, values, loc=loc)
     if isinstance(validated_errors, ErrorWrapper):
@@ -34,12 +36,15 @@ def validate_request_param_data(
         raw_data: Optional[DictStrAny],
         is_single_model: bool,
 ) -> Tuple[DictStrAny, List[Any]]:
+    # TODO: по каждому параметру, если valudate_false -> скипать?
+    # TODO: на уровень выше как-то ловить?
+
     loc: Tuple[str, ...]
 
     if is_single_model:
         model_field = list(required_fields_map.values())[0]
 
-        rapid_param_type = cast(str, model_field.rapid_param_type)
+        rapid_param_type = cast(str, model_field.http_request_param_type)
 
         loc = (rapid_param_type,)
 
@@ -58,9 +63,7 @@ def validate_request_param_data(
     all_validated_errors: List[Dict[str, Any]] = []
 
     for required_field_name, model_field in required_fields_map.items():  # noqa: WPS440
-        rapid_param_type = cast(str, model_field.rapid_param_type)
-
-        loc = (rapid_param_type, model_field.alias)
+        loc = (model_field.http_request_param_type, model_field.alias)
         raw_param_data = raw_data.get(required_field_name) if raw_data is not None else None
 
         validated_data, validated_errors = _validate_data_by_field(

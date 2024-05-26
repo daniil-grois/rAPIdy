@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 
 async def validate_request(
         request: 'Request',
-        *,
         annotation_container: AnnotationContainer,
         errors_response_field_name: str,
 ) -> Dict[str, Any]:
@@ -67,7 +66,6 @@ def view_validation_wrapper(view: Type['View']) -> 'View':
         if handler_attr.upper() in hdrs.METH_ALL
     ):
         method_handler: MethodHandler = getattr(view, method)
-
         annotation_containers[method.lower()] = create_annotation_container(method_handler)
 
     @wraps(view)
@@ -104,10 +102,7 @@ def middleware_validation_wrapper(middleware: Middleware) -> Middleware:
     annotation_container = create_annotation_container(middleware)
 
     @middleware_deco
-    async def inner(
-            request: 'Request',
-            handler: HandlerType,
-    ) -> StreamResponse:
+    async def inner(request: 'Request', handler: HandlerType) -> StreamResponse:
         validated_data = await validate_request(
             request=request,
             annotation_container=annotation_container,

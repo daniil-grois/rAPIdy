@@ -6,22 +6,39 @@ from pydantic.fields import FieldInfo as FieldInfo
 from typing_extensions import Annotated
 
 from rapidy._client_errors import _regenerate_error_with_loc
-from rapidy._request_params_base import ParamType, ValidateType
+from rapidy._request_params_base import HTTPRequestParamType
 from rapidy.constants import PYDANTIC_V1, PYDANTIC_V2
+from rapidy.exceptions import RapidyException
 from rapidy.typedefs import NoArgAnyCallable, Required, Undefined, ValidateReturn
 
 
+class ParameterCannotHaveValidateAttrAsTrueError(RapidyException):
+    _base_err_msg = 'Handler attribute with Type `{class_name}` cannot have `validate` value as `True`.'
+
+    def __init__(self, *args: Any, class_name: str) -> None:
+        super().__init__(f'{self._base_err_msg.format(class_name=class_name)}', *args)
+
+
+class ParameterCannotHaveExtractAllAttrAsFalseError(RapidyException):
+    _base_err_msg = 'Handler attribute with Type `{class_name}` cannot have `extract_all` value as `False`.'
+
+    def __init__(self, *args: Any, class_name: str) -> None:
+        super().__init__(f'{self._base_err_msg.format(class_name=class_name)}', *args)
+
+
 class ParamFieldInfo(FieldInfo, ABC):
-    param_type: ParamType
+    http_request_param_type: HTTPRequestParamType
     extractor: Any
-    validate_type: ValidateType
     can_default: bool = True
+    only_raw: bool = False
 
     def __init__(
             self,
             default: Any = Undefined,
             *,
             default_factory: Optional[NoArgAnyCallable] = None,
+            validate: Optional[bool] = None,
+            extract_all: Optional[bool] = None,
             **field_info_kwargs: Any,
     ) -> None:
         FieldInfo.__init__(
@@ -32,6 +49,20 @@ class ParamFieldInfo(FieldInfo, ABC):
         )
         if PYDANTIC_V1:
             self._validate()  # check specify both default and default_factory
+
+        need_validate = validate is not None and validate == True
+
+        if self.only_raw:
+            if need_validate:
+                raise ParameterCannotHaveValidateAttrAsTrueError(class_name=self.__class__.__name__)
+            if extract_all is False:
+                raise ParameterCannotHaveExtractAllAttrAsFalseError(class_name=self.__class__.__name__)
+
+            self.validate = False
+            self.extract_all = True
+        else:
+            self.validate = validate if validate is not None else True
+            self.extract_all = extract_all if extract_all is not None else False
 
 
 if PYDANTIC_V1:  # noqa: C901
@@ -70,9 +101,9 @@ if PYDANTIC_V1:  # noqa: C901
                 alias=alias,
                 field_info=field_info,
             )
-            rapid_param_type: Optional[ParamType] = kw.pop('rapid_param_type', None)
-            if rapid_param_type:
-                self.rapid_param_type = rapid_param_type
+            http_request_param_type: Optional[HTTPRequestParamType] = kw.pop('http_request_param_type', None)
+            if http_request_param_type:
+                self.http_request_param_type = http_request_param_type
 
     def create_field(
             name: str,
@@ -85,7 +116,7 @@ if PYDANTIC_V1:  # noqa: C901
             'name': name,
             'field_info': field_info,
             'type_': type_,
-            'rapid_param_type': field_info.param_type,
+            'http_request_param_type': field_info.http_request_param_type,
             'required': required,
             'alias': field_info.alias or name,
             'default': field_info.default,
@@ -113,7 +144,7 @@ elif PYDANTIC_V2:
     class ModelField:  # type: ignore[no-redef]  # noqa: WPS440
         name: str
         field_info: FieldInfo
-        rapid_param_type: ParamType
+        http_request_param_type: HTTPRequestParamType
 
         @property
         def alias(self) -> str:
@@ -167,5 +198,5 @@ elif PYDANTIC_V2:
         return ModelField(  # type: ignore[call-arg]
             name=name,
             field_info=field_info,
-            rapid_param_type=field_info.param_type,
+            http_request_param_type=field_info.http_request_param_type,
         )

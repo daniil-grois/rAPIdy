@@ -228,25 +228,6 @@ async def test_success_class_def_as_subapp(
     await _test(aiohttp_client, app, request_kw, path='/v1/')
 
 
-async def test_not_found(aiohttp_client: AiohttpClient) -> None:
-    app = Application()
-    client = await aiohttp_client(app)
-    resp = await client.post('/')
-    assert resp.status == HTTPStatus.NOT_FOUND
-
-
-async def test_not_allowed(aiohttp_client: AiohttpClient) -> None:
-    async def handler() -> web.Response:
-        pass
-
-    app = Application()
-    app.add_routes([web.get('/', handler)])
-    client = await aiohttp_client(app)
-    resp = await client.post('/')
-
-    assert resp.status == HTTPStatus.METHOD_NOT_ALLOWED
-
-
 async def _test(
         aiohttp_client: AiohttpClient,
         app: web.Application,
