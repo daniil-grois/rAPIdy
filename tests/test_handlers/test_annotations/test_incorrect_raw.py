@@ -1,8 +1,11 @@
 import pytest
 
-from rapidy._fields import ParamFieldInfo, ParameterCannotHaveValidateAttrAsTrueError, \
-    ParameterCannotHaveExtractAllAttrAsFalseError
-from rapidy.request_params import BytesBody, TextBody, StreamBody
+from rapidy._fields import (
+    ParameterCannotHaveExtractAllAttrAsFalseError,
+    ParameterCannotHaveValidateAttrAsTrueError,
+    ParamFieldInfo,
+)
+from rapidy.request_params import BytesBody, StreamBody, TextBody
 
 ONLY_RAW_EXTRACT_PARAMS = (BytesBody, TextBody, StreamBody)
 

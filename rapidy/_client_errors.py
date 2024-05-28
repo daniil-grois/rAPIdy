@@ -96,7 +96,7 @@ elif PYDANTIC_V2:
         ]
 
     def _normalize_errors(errors: List[Any]) -> ValidationErrorList:
-        for error in errors:  # TODO: FIXME
+        for error in errors:  # FIXME: ...
             error.pop('url', None)
             error.pop('input', None)
         return errors
@@ -129,6 +129,7 @@ class ExtractMultipartPartError(ExtractMultipartError):
     msg_template = 'Failed to extract body data as Multipart. Failed to read part `{part_num}`: {multipart_error}'
 
 
+# TODO:...
 def _create_handler_info_msg(handler: Any) -> str:
     return (
         f'\nHandler path: `{handler.__code__.co_filename}`'

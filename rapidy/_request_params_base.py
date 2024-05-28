@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class HTTPRequestParamType(str, Enum):  # TODO: вынести в др место?
+class HTTPRequestParamType(str, Enum):
     path = 'path'
     query = 'query'
     header = 'header'

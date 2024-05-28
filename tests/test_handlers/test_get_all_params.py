@@ -6,13 +6,7 @@ from pytest_aiohttp.plugin import AiohttpClient
 from typing_extensions import Annotated, Final
 
 from rapidy import web
-from rapidy.request_params import (
-    Cookie,
-    Header,
-    JsonBody,
-    Path,
-    Query,
-)
+from rapidy.request_params import Cookie, Header, JsonBody, Path, Query
 from rapidy.typedefs import HandlerType
 
 HANDLER_PATH: Final[str] = '/{attr1}/{attr2}'

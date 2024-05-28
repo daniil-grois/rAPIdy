@@ -1,11 +1,11 @@
 from http import HTTPStatus
 from typing import Any
 
+import pytest
 from aiohttp.pytest_plugin import AiohttpClient
-from rapidy import web
 from typing_extensions import Annotated
 
-import pytest
+from rapidy import web
 
 
 @pytest.mark.parametrize(

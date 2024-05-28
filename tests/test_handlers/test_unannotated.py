@@ -4,7 +4,7 @@ import pytest
 from aiohttp.pytest_plugin import AiohttpClient
 
 from rapidy import web
-from rapidy._annotation_container import RequestFieldAlreadyExistError
+from rapidy._annotation_container import RequestFieldAlreadyExistsError
 
 
 async def test_success(aiohttp_client: AiohttpClient) -> None:
@@ -25,5 +25,5 @@ async def test_twice_request_def(aiohttp_client: AiohttpClient) -> None:
         return web.Response()
 
     app = web.Application()
-    with pytest.raises(RequestFieldAlreadyExistError):
+    with pytest.raises(RequestFieldAlreadyExistsError):
         app.add_routes([web.post('/', handler)])

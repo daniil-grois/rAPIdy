@@ -1,11 +1,10 @@
 from http import HTTPStatus
-from typing import Any, Annotated
+from typing import Annotated, Any
 
 import pytest
 from aiohttp.pytest_plugin import AiohttpClient
 
 from rapidy import web
-
 from rapidy.request_params import JsonBody
 
 

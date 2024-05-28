@@ -5,7 +5,7 @@ from rapidy._fields import ModelField
 from rapidy.typedefs import DictStrAny, ErrorWrapper
 
 
-def _validate_data_by_field(  # TODO: rename?
+def _validate_data_by_field(  # noqa: WPS212
         raw_data: Optional[Any],
         loc: Tuple[str, ...],
         model_field: ModelField,
@@ -34,14 +34,11 @@ def _validate_data_by_field(  # TODO: rename?
 def validate_request_param_data(
         required_fields_map: Dict[str, ModelField],
         raw_data: Optional[DictStrAny],
-        is_single_model: bool,
+        all_data: bool,
 ) -> Tuple[DictStrAny, List[Any]]:
-    # TODO: по каждому параметру, если valudate_false -> скипать?
-    # TODO: на уровень выше как-то ловить?
-
     loc: Tuple[str, ...]
 
-    if is_single_model:
+    if all_data:
         model_field = list(required_fields_map.values())[0]
 
         rapid_param_type = cast(str, model_field.http_request_param_type)

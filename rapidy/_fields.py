@@ -5,25 +5,19 @@ from pydantic import ValidationError
 from pydantic.fields import FieldInfo as FieldInfo
 from typing_extensions import Annotated
 
+from rapidy._base_exceptions import RapidyException
 from rapidy._client_errors import _regenerate_error_with_loc
 from rapidy._request_params_base import HTTPRequestParamType
 from rapidy.constants import PYDANTIC_V1, PYDANTIC_V2
-from rapidy.exceptions import RapidyException
 from rapidy.typedefs import NoArgAnyCallable, Required, Undefined, ValidateReturn
 
 
 class ParameterCannotHaveValidateAttrAsTrueError(RapidyException):
-    _base_err_msg = 'Handler attribute with Type `{class_name}` cannot have `validate` value as `True`.'
-
-    def __init__(self, *args: Any, class_name: str) -> None:
-        super().__init__(f'{self._base_err_msg.format(class_name=class_name)}', *args)
+    message = 'Handler attribute with Type `{class_name}` cannot have `validate` value as `True`.'
 
 
 class ParameterCannotHaveExtractAllAttrAsFalseError(RapidyException):
-    _base_err_msg = 'Handler attribute with Type `{class_name}` cannot have `extract_all` value as `False`.'
-
-    def __init__(self, *args: Any, class_name: str) -> None:
-        super().__init__(f'{self._base_err_msg.format(class_name=class_name)}', *args)
+    message = 'Handler attribute with Type `{class_name}` cannot have `extract_all` value as `False`.'
 
 
 class ParamFieldInfo(FieldInfo, ABC):

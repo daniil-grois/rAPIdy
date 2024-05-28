@@ -9,13 +9,7 @@ from typing_extensions import Final
 
 from rapidy import web
 from rapidy._fields import ParamFieldInfo
-from rapidy.request_params import (
-    Cookie,
-    Header,
-    JsonBody,
-    Path,
-    Query, FormDataBody, MultipartBody,
-)
+from rapidy.request_params import Cookie, FormDataBody, Header, JsonBody, MultipartBody, Path, Query
 from rapidy.typedefs import HandlerType
 from tests.helpers import create_multipart_headers
 

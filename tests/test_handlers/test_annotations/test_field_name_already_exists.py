@@ -3,16 +3,16 @@ from typing import Any
 import pytest
 
 from rapidy import web
-from rapidy._annotation_container import AddParameterError
+from rapidy._annotation_container import AnotherDataExtractionTypeAlreadyExistsError, AttributeAlreadyExistsError
 from rapidy.request_params import (
-    Path,
-    Header,
-    Cookie,
-    Query,
-    JsonBody,
-    FormDataBody,
-    MultipartBody,
     BytesBody,
+    Cookie,
+    FormDataBody,
+    Header,
+    JsonBody,
+    MultipartBody,
+    Path,
+    Query,
     StreamBody,
     TextBody,
 )
@@ -46,10 +46,11 @@ async def test_check_single_and_complex_params(type_: Any) -> None:
         return web.Response()
 
     app = web.Application()
-    with pytest.raises(AddParameterError):
+
+    with pytest.raises(AnotherDataExtractionTypeAlreadyExistsError):
         app.add_routes([web.post('/', handler1)])
 
-    with pytest.raises(AddParameterError):
+    with pytest.raises(AnotherDataExtractionTypeAlreadyExistsError):
         app.add_routes([web.post('/', handler2)])
 
 
@@ -67,5 +68,14 @@ async def test_body_diff_types(type_1: Any, type_2: Any) -> None:
         return web.Response()
 
     app = web.Application()
-    with pytest.raises(AddParameterError):
+    with pytest.raises(AnotherDataExtractionTypeAlreadyExistsError):
+        app.add_routes([web.post('/', handler)])
+
+
+async def test_already_exist():
+    async def handler(p1: Any = Header(alias='same_name'), p2: Any = Header(alias='same_name')) -> Any:
+        return web.Response()
+
+    app = web.Application()
+    with pytest.raises(AttributeAlreadyExistsError):
         app.add_routes([web.post('/', handler)])

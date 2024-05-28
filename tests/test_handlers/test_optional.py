@@ -17,8 +17,8 @@ from rapidy.request_params import (
     MultipartBody,
     Path,
     Query,
-    TextBody,
     StreamBody,
+    TextBody,
 )
 
 

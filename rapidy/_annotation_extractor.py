@@ -1,90 +1,45 @@
 import inspect
 from copy import deepcopy
-from typing import Any, cast, Type, Union
+from typing import Annotated, Any, cast, get_args, get_origin, Type, Union
 
-from rapidy._client_errors import _create_handler_attr_info_msg
-from rapidy._foo import annotation_is_optional
+from rapidy._base_exceptions import RapidyException
 from rapidy.request_params import ParamFieldInfo
 from rapidy.typedefs import Handler, Required, Undefined
 
 
-# TODO: ошибки на рапидовские вывести
-#  ошибки должны содержать ссылку на доку
 class NotParameterError(Exception):
     pass
 
 
-class ParameterCannotUseDefaultError(Exception):
-    _base_err_msg = 'Handler attribute with Type `{class_name}` cannot have a default value.'
-
-    def __init__(self, *args: Any, class_name: str, handler: Any, param_name: str) -> None:
-        super().__init__(
-            f'{self._base_err_msg.format(class_name=class_name)}\n{_create_handler_attr_info_msg(handler, param_name)}',
-            *args,
-        )
+class ParameterCannotUseDefaultError(RapidyException):
+    message = 'Handler attribute with Type `{class_name}` cannot have a default value.'
 
 
-class ParameterCannotUseDefaultFactoryError(Exception):
-    _base_err_msg = 'Handler attribute with Type `{class_name}` cannot have a default_factory.'
-
-    def __init__(self, *args: Any, class_name: str, handler: Any, param_name: str) -> None:
-        super().__init__(
-            f'{self._base_err_msg.format(class_name=class_name)}\n{_create_handler_attr_info_msg(handler, param_name)}',
-            *args,
-        )
+class ParameterCannotUseDefaultFactoryError(RapidyException):
+    message = 'Handler attribute with Type `{class_name}` cannot have a default_factory.'
 
 
-class SpecifyBothDefaultAndDefaultFactoryError(TypeError):
-    _base_err_msg = 'Cannot specify both default and default_factory in `{class_name}`.'
-
-    def __init__(self, *args: Any, class_name: str, handler: Any, param_name: str) -> None:
-        super().__init__(
-            f'{self._base_err_msg.format(class_name=class_name)}\n{_create_handler_attr_info_msg(handler, param_name)}',
-            *args,
-        )
+class SpecifyBothDefaultAndDefaultFactoryError(RapidyException):
+    message = 'Cannot specify both default and default_factory in `{class_name}`.'
 
 
-class ParameterCannotBeOptionalError(TypeError):
-    _base_err_msg = 'A parameter `{class_name}` cannot be optional.'
-
-    def __init__(self, *args: Any, class_name: str, handler: Any, param_name: str) -> None:
-        super().__init__(
-            f'{self._base_err_msg.format(class_name=class_name)}\n{_create_handler_attr_info_msg(handler, param_name)}',
-            *args,
-        )
+class ParameterCannotBeOptionalError(RapidyException):
+    message = 'A parameter `{class_name}` cannot be optional.'
 
 
-class SpecifyBothDefaultAndOptionalError(TypeError):
-    _base_err_msg = 'A parameter cannot be optional if it contains a default value in `{class_name}`.'
-
-    def __init__(self, *args: Any, class_name: str, handler: Any, param_name: str) -> None:
-        super().__init__(
-            f'{self._base_err_msg.format(class_name=class_name)}\n{_create_handler_attr_info_msg(handler, param_name)}',
-            *args,
-        )
+class SpecifyBothDefaultAndOptionalError(RapidyException):
+    message = 'A parameter cannot be optional if it contains a default value in `{class_name}`.'
 
 
-class SpecifyBothDefaultFactoryAndOptionalError(TypeError):
-    _base_err_msg = 'A parameter cannot be optional if it contains a default factory in `{class_name}`.'
-
-    def __init__(self, *args: Any, class_name: str, handler: Any, param_name: str) -> None:
-        super().__init__(
-            f'{self._base_err_msg.format(class_name=class_name)}\n{_create_handler_attr_info_msg(handler, param_name)}',
-            *args,
-        )
+class SpecifyBothDefaultFactoryAndOptionalError(RapidyException):
+    message = 'A parameter cannot be optional if it contains a default factory in `{class_name}`.'
 
 
-class IncorrectDefineDefaultValueError(Exception):
-    _base_err_msg = (
+class IncorrectDefineDefaultValueError(RapidyException):
+    message = (
         'Default value cannot be set in `{class_name}`. '
         'You cannot specify a default value using Param(<default_value>, ...) and `=` at the same time.'
     )
-
-    def __init__(self, *args: Any, class_name: str, handler: Any, param_name: str) -> None:
-        super().__init__(
-            f'{self._base_err_msg.format(class_name=class_name)}\n{_create_handler_attr_info_msg(handler, param_name)}',
-            *args,
-        )
 
 
 def prepare_field_info(raw_field_info: Union[ParamFieldInfo, Type[ParamFieldInfo]]) -> ParamFieldInfo:
@@ -109,46 +64,46 @@ def check_possibility_of_default(
         field_info: ParamFieldInfo,
 ) -> None:
     if not can_default and param_is_optional:
-        raise ParameterCannotBeOptionalError(
-            class_name=field_info.__class__.__name__,
+        raise ParameterCannotBeOptionalError.create_with_handler_and_attr_info(
             handler=handler,
-            param_name=param.name,
+            attr_name=param.name,
+            class_name=field_info.__class__.__name__,
         )
 
     if default_exists and not can_default:
-        raise ParameterCannotUseDefaultError(
-            class_name=field_info.__class__.__name__,
+        raise ParameterCannotUseDefaultError.create_with_handler_and_attr_info(
             handler=handler,
-            param_name=param.name,
+            attr_name=param.name,
+            class_name=field_info.__class__.__name__,
         )
 
     if default_factory_exists and not can_default:
-        raise ParameterCannotUseDefaultFactoryError(
-            class_name=field_info.__class__.__name__,
+        raise ParameterCannotUseDefaultFactoryError.create_with_handler_and_attr_info(
             handler=handler,
-            param_name=param.name,
+            attr_name=param.name,
+            class_name=field_info.__class__.__name__,
         )
 
-    # NOTE: описать что для некоторых сценариев раньше отшибет пидантик
+    # NOTE: This error is caused earlier by `pydantic` for some scenarios.
     if default_exists and default_factory_exists:
-        raise SpecifyBothDefaultAndDefaultFactoryError(
-            class_name=field_info.__class__.__name__,
+        raise SpecifyBothDefaultAndDefaultFactoryError.create_with_handler_and_attr_info(
             handler=handler,
-            param_name=param.name,
+            attr_name=param.name,
+            class_name=field_info.__class__.__name__,
         )
 
     if default_exists and not default_is_none and param_is_optional:
-        raise SpecifyBothDefaultAndOptionalError(
-            class_name=field_info.__class__.__name__,
+        raise SpecifyBothDefaultAndOptionalError.create_with_handler_and_attr_info(
             handler=handler,
-            param_name=param.name,
+            attr_name=param.name,
+            class_name=field_info.__class__.__name__,
         )
 
     if default_factory_exists and param_is_optional:
-        raise SpecifyBothDefaultFactoryAndOptionalError(
-            class_name=field_info.__class__.__name__,
+        raise SpecifyBothDefaultFactoryAndOptionalError.create_with_handler_and_attr_info(
             handler=handler,
-            param_name=param.name,
+            attr_name=param.name,
+            class_name=field_info.__class__.__name__,
         )
 
 
@@ -186,10 +141,10 @@ def get_annotated_definition_attr_default(
     )
 
     if default_value_for_param_exists and default_value_for_field_exists:
-        raise IncorrectDefineDefaultValueError(
-            class_name=field_info.__class__.__name__,
+        raise IncorrectDefineDefaultValueError.create_with_handler_and_attr_info(
             handler=handler,
-            param_name=param.name,
+            attr_name=param.name,
+            class_name=field_info.__class__.__name__,
         )
 
     return default
@@ -222,3 +177,45 @@ def get_default_definition_attr_default(
 
 def check_default_value_for_field_exists(field_info: ParamFieldInfo) -> bool:
     return not (field_info.default is Undefined or field_info.default is Required)
+
+
+def create_attribute_field_info(handler: Handler, param: inspect.Parameter) -> ParamFieldInfo:
+    annotation_origin = get_origin(param.annotation)
+
+    if annotation_origin is Annotated:
+        annotated_args = get_args(param.annotation)
+        if len(annotated_args) != 2:
+            raise NotParameterError
+
+        type_, param_field_info = annotated_args
+
+        prepared_param_field_info = prepare_field_info(param_field_info)
+        default = get_annotated_definition_attr_default(
+            param=param, handler=handler, type_=type_, field_info=prepared_param_field_info,
+        )
+
+    else:
+        if param.default is inspect.Signature.empty:
+            raise NotParameterError
+
+        type_, param_field_info = param.annotation, param.default
+
+        prepared_param_field_info = prepare_field_info(param_field_info)
+        default = get_default_definition_attr_default(
+            param=param, handler=handler, type_=param.annotation, field_info=prepared_param_field_info,
+        )
+
+    if not isinstance(prepared_param_field_info, ParamFieldInfo):  # pragma: no cover
+        raise
+
+    prepared_param_field_info.annotation = type_
+    prepared_param_field_info.default = default
+
+    return prepared_param_field_info
+
+
+def annotation_is_optional(annotation: Any) -> bool:
+    if not get_origin(annotation) is Union:
+        return False
+
+    return type(None) in get_args(annotation)
