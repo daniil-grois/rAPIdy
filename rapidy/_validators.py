@@ -5,21 +5,42 @@ from rapidy._fields import ModelField
 from rapidy.typedefs import DictStrAny, ErrorWrapper
 
 
-def _validate_data_by_field(  # noqa: WPS212
-        raw_data: Optional[Any],
+def _validate_data_by_field(
+        raw_data: Any,
         loc: Tuple[str, ...],
         model_field: ModelField,
         values: DictStrAny,
 ) -> Tuple[Optional[Any], List[Any]]:
-    if raw_data is None:
+    if not model_field.field_info.validate:
+        if not raw_data:
+            if model_field.required:
+                return values, [RequiredFieldIsMissing().get_error_info(loc=loc)]
+
+            return model_field.get_default(), []
+
+        return raw_data, []
+
+    if raw_data is None or raw_data == {}:
+        validated_data, validated_errors = _validate_data(
+            values=values, loc=loc, model_field=model_field, raw_data=raw_data,
+        )
+        if validated_data:  # scenario when there are optional fields inside the model
+            return validated_data, []
+
         if model_field.required:
             return values, [RequiredFieldIsMissing().get_error_info(loc=loc)]
 
         return model_field.get_default(), []
 
-    if not model_field.field_info.validate:
-        return raw_data, []
+    return _validate_data(values=values, loc=loc, model_field=model_field, raw_data=raw_data)
 
+
+def _validate_data(
+        raw_data: Any,
+        loc: Tuple[str, ...],
+        model_field: ModelField,
+        values: DictStrAny,
+) -> Tuple[Optional[Any], List[Any]]:
     validated_data, validated_errors = model_field.validate(raw_data, values, loc=loc)
     if isinstance(validated_errors, ErrorWrapper):
         return values, [validated_errors]

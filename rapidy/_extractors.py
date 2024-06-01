@@ -24,28 +24,16 @@ async def extract_path(request: Request) -> DictStrStr:
     return dict(request.match_info)
 
 
-async def extract_headers(request: Request) -> Optional[DictStrStr]:
-    headers = request.headers
-    if not headers:
-        return None
-
+async def extract_headers(request: Request) -> DictStrStr:
     return parse_multi_params(request.headers)  # type: ignore[return-value]
 
 
-async def extract_cookies(request: Request) -> Optional[DictStrStr]:
-    cookies = request.cookies
-    if not cookies:
-        return None
-
-    return dict(cookies)
+async def extract_cookies(request: Request) -> DictStrStr:
+    return dict(request.cookies)
 
 
-async def extract_query(request: Request) -> Optional[DictStrStr]:
-    query = request.rel_url.query
-    if not query:
-        return None
-
-    return parse_multi_params(query)  # type: ignore[return-value]
+async def extract_query(request: Request) -> DictStrStr:
+    return parse_multi_params(request.rel_url.query)  # type: ignore[return-value]
 
 
 async def extract_body_stream(request: Request, max_size: int) -> Optional[StreamReader]:

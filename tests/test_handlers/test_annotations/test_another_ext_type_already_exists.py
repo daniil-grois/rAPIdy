@@ -5,14 +5,14 @@ import pytest
 from rapidy import web
 from rapidy._annotation_container import AnotherDataExtractionTypeAlreadyExistsError
 from rapidy.request_params import (
-    Path,
-    Header,
-    Cookie,
-    Query,
-    JsonBody,
-    FormDataBody,
-    MultipartBody,
     BytesBody,
+    Cookie,
+    FormDataBody,
+    Header,
+    JsonBody,
+    MultipartBody,
+    Path,
+    Query,
     StreamBody,
     TextBody,
 )
