@@ -167,7 +167,9 @@ if PYDANTIC_V1:  # noqa: C901
                 alias=alias,
                 field_info=field_info,
             )
-            self.default_exists =  self.field_info.default is not Undefined or self.field_info.default_factory is not None
+            field_info_default_exist = self.field_info.default is not Undefined and self.default is not ...
+            self.default_exists = field_info_default_exist or self.field_info.default_factory is not None
+
             http_request_param_type: Optional[HTTPRequestParamType] = kw.pop('http_request_param_type', None)
             if http_request_param_type:
                 self.http_request_param_type = http_request_param_type
