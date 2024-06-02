@@ -2,7 +2,7 @@ from typing import Any, cast, Dict, List, Optional, Tuple
 
 from rapidy._client_errors import _regenerate_error_with_loc, RequiredFieldIsMissing
 from rapidy._fields import ModelField
-from rapidy.typedefs import DictStrAny, ErrorWrapper
+from rapidy.typedefs import DictStrAny, ErrorWrapper, Undefined
 
 
 def _validate_data_by_field(
@@ -11,28 +11,30 @@ def _validate_data_by_field(
         model_field: ModelField,
         values: DictStrAny,
 ) -> Tuple[Optional[Any], List[Any]]:
-    if not model_field.field_info.validate:
-        if not raw_data:
-            if model_field.required:
-                return values, [RequiredFieldIsMissing().get_error_info(loc=loc)]
-
-            return model_field.get_default(), []
-
-        return raw_data, []
-
-    if raw_data is None or raw_data == {}:
-        validated_data, validated_errors = _validate_data(
-            values=values, loc=loc, model_field=model_field, raw_data=raw_data,
-        )
-        if validated_data:  # scenario when there are optional fields inside the model
-            return validated_data, []
-
+    if raw_data is None:
         if model_field.required:
             return values, [RequiredFieldIsMissing().get_error_info(loc=loc)]
 
         return model_field.get_default(), []
 
-    return _validate_data(values=values, loc=loc, model_field=model_field, raw_data=raw_data)
+    if model_field.default is not Undefined and not raw_data:
+        if model_field.default is None:
+            return None, []
+
+        return model_field.get_default(), []
+
+    if not model_field.field_info.validate:
+        return raw_data, []
+
+    validated_data, validated_errors = model_field.validate(raw_data, values, loc=loc)
+    if isinstance(validated_errors, ErrorWrapper):
+        return values, [validated_errors]
+
+    if isinstance(validated_errors, list):
+        converted_errors = _regenerate_error_with_loc(errors=validated_errors, loc_prefix=())
+        return values, converted_errors
+
+    return validated_data, []
 
 
 def _validate_data(
