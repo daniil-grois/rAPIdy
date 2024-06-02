@@ -1,14 +1,16 @@
-from rapidy._annotation_extractor import SpecifyBothDefaultAndOptionalError, SpecifyBothDefaultFactoryAndOptionalError, \
-    ParameterCannotBeOptionalError
-from rapidy._base_exceptions import RapidyException
-from rapidy.typedefs import Handler
 from functools import partial
-from typing import Any, Type, Tuple, Optional
+from typing import Any, Optional, Tuple, Type
 
 import pytest
 from typing_extensions import Annotated, Final
 
 from rapidy import web
+from rapidy._annotation_extractor import (
+    ParameterCannotBeOptionalError,
+    SpecifyBothDefaultAndOptionalError,
+    SpecifyBothDefaultFactoryAndOptionalError,
+)
+from rapidy._base_exceptions import RapidyException
 from rapidy._fields import ParamFieldInfo
 from rapidy.request_params import (
     BytesBody,
@@ -19,9 +21,10 @@ from rapidy.request_params import (
     MultipartBody,
     Path,
     Query,
-    TextBody,
     StreamBody,
+    TextBody,
 )
+from rapidy.typedefs import Handler
 
 DEFAULT_VALUE: Final[str] = 'DEFAULT'
 

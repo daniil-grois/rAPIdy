@@ -1,6 +1,6 @@
 from functools import partial
 from http import HTTPStatus
-from typing import Any, Type, Tuple
+from typing import Any, Tuple, Type
 
 import pytest
 from pydantic import BaseModel
@@ -8,8 +8,12 @@ from pytest_aiohttp.plugin import AiohttpClient
 from typing_extensions import Annotated, Final
 
 from rapidy import web
-from rapidy._annotation_extractor import ParameterCannotUseDefaultError, ParameterCannotUseDefaultFactoryError, \
-    IncorrectDefineDefaultValueError, SpecifyBothDefaultAndDefaultFactoryError
+from rapidy._annotation_extractor import (
+    IncorrectDefineDefaultValueError,
+    ParameterCannotUseDefaultError,
+    ParameterCannotUseDefaultFactoryError,
+    SpecifyBothDefaultAndDefaultFactoryError,
+)
 from rapidy._base_exceptions import RapidyException
 from rapidy._fields import ParamFieldInfo
 from rapidy.request_params import (
@@ -21,9 +25,10 @@ from rapidy.request_params import (
     MultipartBody,
     Path,
     Query,
-    TextBody, StreamBody,
+    StreamBody,
+    TextBody,
 )
-from rapidy.typedefs import Handler, DictStrAny
+from rapidy.typedefs import DictStrAny, Handler
 
 DEFAULT_VALUE: Final[str] = 'DEFAULT'
 
@@ -138,7 +143,7 @@ async def test_specify_both_default_and_default_factory(type_: Type[ParamFieldIn
         app.add_routes([web.post('/', handler)])
 
 
-# NOTE: Let's not stop the `dev-user` if he wants to set default = None to an optional parameter
+# NOTE: Let's not stop the `dev-user` if he wants to set default = None to a non-optional type
 @pytest.mark.parametrize('type_', can_default_params)
 async def test_optional_default(
         aiohttp_client: AiohttpClient,
@@ -158,13 +163,15 @@ async def test_optional_default(
         await _test(app=app, path=path, aiohttp_client=aiohttp_client)
 
 
-@pytest.mark.parametrize('type_, request_kw', (
-    (Header, {'headers': {'attr2': 'attr2'}}),
-    (Cookie, {'cookies': {'attr2': 'attr2'}}),
-    (Query, {'params': {'attr2': 'attr2'}}),
-    (JsonBody, {'json': {'attr2': 'attr2'}}),
-    (FormDataBody, {'data': {'attr2': 'attr2'}}),
-))
+@pytest.mark.parametrize(
+    'type_, request_kw', (
+        (Header, {'headers': {'attr2': 'attr2'}}),
+        (Cookie, {'cookies': {'attr2': 'attr2'}}),
+        (Query, {'params': {'attr2': 'attr2'}}),
+        (JsonBody, {'json': {'attr2': 'attr2'}}),
+        (FormDataBody, {'data': {'attr2': 'attr2'}}),
+    ),
+)
 async def test_attrs_schema_one_param_exist_second_param_is_default(
         aiohttp_client: AiohttpClient,
         type_: Type[ParamFieldInfo],

@@ -1,14 +1,14 @@
 from typing import Any, cast, Dict, List, Optional, Tuple
 
 from rapidy._client_errors import _regenerate_error_with_loc, RequiredFieldIsMissing
-from rapidy._fields import ModelField
-from rapidy.typedefs import DictStrAny, ErrorWrapper, Undefined
+from rapidy._fields import BaseModelField
+from rapidy.typedefs import DictStrAny, ErrorWrapper
 
 
 def _validate_data_by_field(
         raw_data: Any,
         loc: Tuple[str, ...],
-        model_field: ModelField,
+        model_field: BaseModelField,
         values: DictStrAny,
 ) -> Tuple[Optional[Any], List[Any]]:
     if raw_data is None:
@@ -17,8 +17,8 @@ def _validate_data_by_field(
 
         return model_field.get_default(), []
 
-    if model_field.default is not Undefined and not raw_data:
-        if model_field.default is None:
+    if model_field.default_exists and not raw_data:
+        if model_field.field_info.default is None:
             return None, []
 
         return model_field.get_default(), []
@@ -37,25 +37,8 @@ def _validate_data_by_field(
     return validated_data, []
 
 
-def _validate_data(
-        raw_data: Any,
-        loc: Tuple[str, ...],
-        model_field: ModelField,
-        values: DictStrAny,
-) -> Tuple[Optional[Any], List[Any]]:
-    validated_data, validated_errors = model_field.validate(raw_data, values, loc=loc)
-    if isinstance(validated_errors, ErrorWrapper):
-        return values, [validated_errors]
-
-    if isinstance(validated_errors, list):
-        converted_errors = _regenerate_error_with_loc(errors=validated_errors, loc_prefix=())
-        return values, converted_errors
-
-    return validated_data, []
-
-
 def validate_request_param_data(
-        required_fields_map: Dict[str, ModelField],
+        required_fields_map: Dict[str, BaseModelField],
         raw_data: Optional[DictStrAny],
         all_data: bool,
 ) -> Tuple[DictStrAny, List[Any]]:

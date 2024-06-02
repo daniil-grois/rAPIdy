@@ -18,7 +18,7 @@ from rapidy._extractors import (
     extract_path,
     extract_query,
 )
-from rapidy._fields import create_field, get_annotation_from_field_info, ModelField, ParamFieldInfo
+from rapidy._fields import BaseModelField, create_field, get_annotation_from_field_info, ParamFieldInfo
 from rapidy._request_params_base import HTTPRequestParamType
 from rapidy.constants import MAX_BODY_SIZE
 from rapidy.media_types import ApplicationBytes, ApplicationJSON, ApplicationXWWWForm, MultipartForm, TextPlain
@@ -194,7 +194,7 @@ def create_param_model_field_by_request_param(  # TODO: точно здесь?
         param_name: str,
         param_default: Any,
         param_default_factory: Optional[NoArgAnyCallable],
-) -> ModelField:
+) -> BaseModelField:
     copied_field_info = copy(field_info)
 
     if param_default is not inspect.Signature.empty:

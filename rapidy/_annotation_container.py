@@ -1,7 +1,7 @@
 import inspect
 from abc import ABC, abstractmethod
 from types import FunctionType
-from typing import Any, Dict, Iterator, Optional, Set, Type, Union
+from typing import Any, Dict, Iterator, Optional, Set, Union
 
 from aiohttp.web_request import Request
 from typing_extensions import get_args
@@ -9,7 +9,7 @@ from typing_extensions import get_args
 from rapidy._annotation_extractor import create_attribute_field_info, NotParameterError
 from rapidy._base_exceptions import RapidyException
 from rapidy._client_errors import ExtractError
-from rapidy._fields import ModelField
+from rapidy._fields import BaseModelField
 from rapidy._validators import validate_request_param_data
 from rapidy.request_params import create_param_model_field_by_request_param, HTTPRequestParamType, ParamFieldInfo
 from rapidy.typedefs import Handler, MethodHandler, Middleware, ValidateReturn
@@ -42,7 +42,7 @@ class ParamAnnotationContainer(ABC):
     def __init__(self, extractor: Any, http_request_param_type: HTTPRequestParamType) -> None:
         self._extractor = extractor
         self._http_request_param_type = http_request_param_type
-        self._map_model_fields_by_alias: Dict[str, ModelField] = {}
+        self._map_model_fields_by_alias: Dict[str, BaseModelField] = {}
 
     async def get_request_data(self, request: Request) -> ValidateReturn:
         raw_data = request._cache.get(self._http_request_param_type)
@@ -104,7 +104,7 @@ class ParamAnnotationContainerSingle(ParamAnnotationContainer):
 
     def __init__(self, extractor: Any, http_request_param_type: HTTPRequestParamType) -> None:
         super().__init__(extractor, http_request_param_type)
-        self._added_field_info_class_names: Set[Type[ParamFieldInfo]] = set()
+        self._added_field_info_class_names: Set[str] = set()
 
     def add_field(self, param_name: str, field_info: ParamFieldInfo, handler: _Handler) -> None:
         # NOTE: Make sure that the user does not want to extract two parameters using different data extractors.

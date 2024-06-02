@@ -1,6 +1,9 @@
-from abc import ABC
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from functools import cached_property
 from typing import Any, Dict, Optional, Tuple, Type, TYPE_CHECKING, Union
 
+from aiohttp.streams import StreamReader
 from pydantic import ValidationError
 from pydantic.fields import FieldInfo as FieldInfo
 from typing_extensions import Annotated
@@ -10,6 +13,10 @@ from rapidy._client_errors import _regenerate_error_with_loc
 from rapidy._request_params_base import HTTPRequestParamType
 from rapidy.constants import PYDANTIC_V1, PYDANTIC_V2
 from rapidy.typedefs import NoArgAnyCallable, Required, Undefined, ValidateReturn
+
+rapidy_inner_fake_annotations = {
+    StreamReader,
+}
 
 
 class ParameterCannotHaveValidateAttrAsTrueError(RapidyException):
@@ -59,6 +66,71 @@ class ParamFieldInfo(FieldInfo, ABC):
             self.extract_all = extract_all if extract_all is not None else False
 
 
+@dataclass
+class BaseModelField(ABC):
+    name: str
+    field_info: FieldInfo
+    http_request_param_type: HTTPRequestParamType
+
+    @cached_property
+    def default_exists(self) -> bool:
+        return self.field_info.default is not Undefined or self.field_info.default_factory is not None
+
+    @property
+    @abstractmethod
+    def alias(self) -> str:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def required(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def default(self) -> Any:
+        raise NotImplementedError
+
+    def get_default(self) -> Any:
+        raise NotImplementedError
+
+    @property
+    def type_(self) -> Any:
+        return self.field_info.annotation
+
+    def validate(
+            self,
+            value: Any,
+            values: Dict[str, Any],
+            *,
+            loc: Tuple[Union[int, str], ...],
+    ) -> ValidateReturn:
+        raise NotImplementedError
+
+
+@dataclass
+class FakeModelField(BaseModelField):
+    name: str
+    field_info: FieldInfo
+    http_request_param_type: HTTPRequestParamType
+
+    @property
+    def alias(self) -> str:
+        alias = self.field_info.alias
+        return alias if alias is not None else self.name
+
+    @property
+    def required(self) -> bool:
+        return True
+
+    @property
+    def default(self) -> Any:
+        return Undefined
+
+    def get_default(self) -> Any:
+        return Undefined
+
+
 if PYDANTIC_V1:  # noqa: C901
     from pydantic import BaseConfig  # noqa: WPS433
     from pydantic.class_validators import Validator as Validator  # noqa: WPS433
@@ -75,7 +147,7 @@ if PYDANTIC_V1:  # noqa: C901
                 type_: Type[Any],
                 class_validators: Optional[Dict[str, Validator]],
                 model_config: Type[BaseConfig],
-                default: Any = None,
+                default: Any = Undefined,
                 default_factory: Optional[NoArgAnyCallable] = None,
                 required: 'BoolUndefined' = Undefined,
                 final: bool = False,
@@ -95,6 +167,7 @@ if PYDANTIC_V1:  # noqa: C901
                 alias=alias,
                 field_info=field_info,
             )
+            self.default_exists =  self.field_info.default is not Undefined or self.field_info.default_factory is not None
             http_request_param_type: Optional[HTTPRequestParamType] = kw.pop('http_request_param_type', None)
             if http_request_param_type:
                 self.http_request_param_type = http_request_param_type
@@ -103,7 +176,7 @@ if PYDANTIC_V1:  # noqa: C901
             name: str,
             type_: Type[Any],
             field_info: ParamFieldInfo,
-    ) -> ModelField:
+    ) -> BaseModelField:
         required = field_info.default in (Required, Undefined) and field_info.default_factory is None
 
         kwargs: Dict[str, Any] = {
@@ -120,22 +193,26 @@ if PYDANTIC_V1:  # noqa: C901
         }
         try:
             return ModelField(**kwargs)
-        except Exception:
-            raise Exception(
-                'Invalid args for annotated request field! '
-                f'Hint: check that {type_} is a valid Pydantic field type. ',
-            ) from None
+        except Exception as exc:
+            if field_info.annotation in rapidy_inner_fake_annotations:
+                return FakeModelField(
+                    name=name,
+                    field_info=field_info,
+                    http_request_param_type=field_info.http_request_param_type,
+                )
+            raise exc
+
 
 elif PYDANTIC_V2:
     from dataclasses import dataclass  # noqa: WPS433
 
-    from pydantic import TypeAdapter  # noqa: WPS433
+    from pydantic import PydanticSchemaGenerationError, TypeAdapter  # noqa: WPS433
 
     def get_annotation_from_field_info(annotation: Any, field_info: FieldInfo, field_name: str) -> Any:  # noqa: WPS440
         return annotation
 
     @dataclass
-    class ModelField:  # type: ignore[no-redef]  # noqa: WPS440
+    class ModelField(BaseModelField):  # type: ignore[no-redef]  # noqa: WPS440
         name: str
         field_info: FieldInfo
         http_request_param_type: HTTPRequestParamType
@@ -168,7 +245,7 @@ elif PYDANTIC_V2:
         def validate(
             self,
             value: Any,
-            values: Dict[str, Any] = {},  # noqa: B006 WPS404
+            values: Dict[str, Any],
             *,
             loc: Tuple[Union[int, str], ...],
         ) -> ValidateReturn:
@@ -187,10 +264,20 @@ elif PYDANTIC_V2:
             name: str,
             type_: Type[Any],
             field_info: ParamFieldInfo,
-    ) -> ModelField:
+    ) -> BaseModelField:
         field_info.annotation = type_
-        return ModelField(  # type: ignore[call-arg]
-            name=name,
-            field_info=field_info,
-            http_request_param_type=field_info.http_request_param_type,
-        )
+        try:
+            return ModelField(  # type: ignore[call-arg]
+                name=name,
+                field_info=field_info,
+                http_request_param_type=field_info.http_request_param_type,
+            )
+        except PydanticSchemaGenerationError as pydantic_schema_generation_err:
+            if field_info.annotation in rapidy_inner_fake_annotations:
+                return FakeModelField(
+                    name=name,
+                    field_info=field_info,
+                    http_request_param_type=field_info.http_request_param_type,
+                )
+
+            raise pydantic_schema_generation_err

@@ -66,7 +66,7 @@ async def extract_body_json(
     if not request.body_exists:
         return None
 
-    text_body = await extract_body_text(request=request, max_size=max_size)
+    text_body = await _read_body_text(request=request, max_size=max_size)
     try:
         return json_decoder(text_body)
     except JSONDecodeError as json_decode_err:
@@ -82,7 +82,7 @@ async def extract_body_x_www_form(
     if not request.body_exists:
         return None
 
-    text_body = await extract_body_text(request=request, max_size=max_size)
+    text_body = await _read_body_text(request=request, max_size=max_size)
     unquotes_text = unquote(text_body)
     key_value_arr = parse_qsl(unquotes_text)
 
